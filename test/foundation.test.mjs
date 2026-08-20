@@ -15,7 +15,7 @@ test("package declares the supported Node.js runtime and foundation scripts", as
 
   assert.equal(packageJson.engines.node, ">=20");
   assert.equal(packageJson.scripts.build, "node scripts/build.mjs");
-  assert.equal(packageJson.scripts.test, "node --test test/foundation.test.mjs");
+  assert.equal(packageJson.scripts.test, "node --test test/*.test.mjs");
   assert.equal(packageJson.scripts.check, "npm run build && npm test");
 });
 

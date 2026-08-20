@@ -6,22 +6,22 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Test and coverage output
-coverage/
-.nyc_output/
+/coverage/
+/.nyc_output/
 
 # Generated build output and temporary files
-build/
-dist/
-.tmp/
-tmp/
+/build/
+/dist/
+/.tmp/
+/tmp/
 *.swp
 
 # Temporary upstream refresh checkouts
-upstream/
-.upstream/
+/upstream/
+/.upstream/
 
 # Per-workspace AtSkills state
-.atskills/
+/.atskills/
 
 # Local operating-system files
 .DS_Store
