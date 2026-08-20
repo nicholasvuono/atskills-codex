@@ -6,9 +6,9 @@ testable stages.
 
 ## Status
 
-PR 2 adds the pinned upstream source snapshot, its integrity manifest, and a
-self-contained runtime bundle. Resolver integration, workspace state,
-management skill, and hooks are added by later implementation stages.
+PR 3 adds the prompt parser and resolution adapter on top of the pinned
+upstream runtime. Workspace state, management skill, and hooks are added by
+later implementation stages.
 
 ## Prerequisites
 
@@ -64,6 +64,7 @@ marketplace source when the plugin is ready for manual testing.
 │   ├── .codex-plugin/plugin.json
 │   ├── hooks/
 │   ├── runtime/atskills.mjs
+│   ├── runtime/core.mjs
 │   └── skills/
 ├── scripts/build.mjs
 ├── scripts/refresh-upstream.mjs
