@@ -1,0 +1,20 @@
+{
+  "name": "atskills-local",
+  "interface": {
+    "displayName": "Local @skills"
+  },
+  "plugins": [
+    {
+      "name": "atskills-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/atskills-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

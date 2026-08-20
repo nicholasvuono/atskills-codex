@@ -1,0 +1,31 @@
+{
+  "name": "atskills-codex",
+  "version": "0.1.0",
+  "description": "Load local and GitHub-hosted skills on demand in Codex.",
+  "author": {
+    "name": "Nicholas Vuono",
+    "url": "https://github.com/nicholasvuono"
+  },
+  "repository": "https://github.com/nicholasvuono/atskills-codex",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "codex",
+    "on-demand",
+    "github"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AtSkills for Codex",
+    "shortDescription": "Load and manage skills on demand in Codex.",
+    "longDescription": "AtSkills for Codex provides a local foundation for resolving local and GitHub-hosted skills when requested.",
+    "developerName": "Nicholas Vuono",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "Load a skill on demand with the @skills: workflow."
+    ]
+  }
+}

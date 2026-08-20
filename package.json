@@ -1,0 +1,15 @@
+{
+  "name": "atskills-codex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Codex plugin foundation for the @skills workflow.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/foundation.test.mjs",
+    "check": "npm run build && npm test"
+  }
+}
