@@ -3,6 +3,12 @@ import {
   resolveMany,
   resolveSkill,
 } from "./atskills.mjs";
+import {
+  installSkill,
+  removeSkill,
+  saveSkill,
+  uninstallSkill,
+} from "./state.mjs";
 
 const skillReference = /(?<![\p{L}\p{N}_@])@(?:skills|workflow):[^\s]*/gu;
 
@@ -45,7 +51,12 @@ export async function resolveSkillReferences(message, opts) {
   const results = await resolveMany(
     valid.map((reference) => reference.id),
     valid.map(({ save, install }) => ({ save, install })),
-    (id, save, install) => resolveSkill(id, save, opts, install),
+    (id, save, install) =>
+      save
+        ? saveSkill(id, { ...opts, install })
+        : install
+          ? installSkill(id, opts)
+          : resolveSkill(id, false, opts),
     (_id, error) => ({ success: false, error: errorMessage(error) }),
   );
 
@@ -59,3 +70,5 @@ export async function resolveSkillReferences(message, opts) {
       : { ...reference, result: results[resultIndex++] },
   );
 }
+
+export * from "./state.mjs";
