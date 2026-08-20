@@ -6,8 +6,8 @@ testable stages.
 
 ## Status
 
-PR 1 provides the repository, plugin manifest, repo-local marketplace, and
-offline development checks. The resolver, bundled runtime, workspace state,
+PR 2 adds the pinned upstream source snapshot, its integrity manifest, and a
+self-contained runtime bundle. Resolver integration, workspace state,
 management skill, and hooks are added by later implementation stages.
 
 ## Prerequisites
@@ -15,8 +15,8 @@ management skill, and hooks are added by later implementation stages.
 - Node.js 20 or newer
 - Python 3 for the Codex plugin validator
 
-The plugin is designed to be self-contained when complete. The foundation has
-no runtime dependencies and does not require network access.
+The checked-in plugin runtime has no `node_modules` requirement and does not
+perform installation or network access at runtime.
 
 ## Local development
 
@@ -28,9 +28,19 @@ npm run build
 npm run check
 ```
 
-`npm run build` currently checks the packaging foundation and its required
-paths. It will become the offline runtime bundle build in the upstream-runtime
-stage. `npm run check` runs the build check and tests together.
+`npm run build` verifies the pinned snapshot and regenerates the checked-in
+runtime bundle entirely offline. `npm run check` runs that build and the tests
+together.
+
+The only networked maintenance command is the explicit upstream refresh:
+
+```sh
+npm run refresh:upstream
+```
+
+It fetches the SHA in [`upstream.json`](upstream.json), verifies the resolved
+`HEAD`, refreshes `vendor/atskills/`, its integrity manifest, and the complete
+third-party notice. Do not use it during ordinary builds or tests.
 
 Validate the plugin manifest directly with the bundled Codex validator:
 
@@ -53,10 +63,15 @@ marketplace source when the plugin is ready for manual testing.
 ├── plugins/atskills-codex/
 │   ├── .codex-plugin/plugin.json
 │   ├── hooks/
-│   ├── runtime/
+│   ├── runtime/atskills.mjs
 │   └── skills/
 ├── scripts/build.mjs
-├── test/foundation.test.mjs
+├── scripts/refresh-upstream.mjs
+├── test/
+├── upstream.json
+├── vendor/atskills/
+├── vendor/atskills.snapshot.json
+├── vendor/ignore/
 ├── LICENSE
 ├── THIRD_PARTY_NOTICES.md
 ├── package.json
@@ -64,13 +79,13 @@ marketplace source when the plugin is ready for manual testing.
 ```
 
 `.atskills/` is workspace-local state and is ignored by Git. Temporary
-upstream refresh checkouts and generated build output are also ignored; the
-checked-in runtime artifacts will be introduced in the later runtime stage.
+upstream refresh checkouts and root build output are also ignored. The
+`vendor/` snapshot and generated plugin runtime are intentionally checked in.
 
 ## Scope and provenance
 
-The eventual runtime will adapt the pinned
-`SylphAI-Inc/atskills` implementation at commit
-`858802c58636e43d04edae51d4ac5d7c3819decf`. No upstream source or third-party
-runtime is bundled in this foundation stage; see
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the current notice.
+The runtime adapts the pinned `SylphAI-Inc/atskills` implementation described
+in [`upstream.json`](upstream.json). The source snapshot is checked against
+[`vendor/atskills.snapshot.json`](vendor/atskills.snapshot.json) before every
+build. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the exact
+upstream revision and license text.

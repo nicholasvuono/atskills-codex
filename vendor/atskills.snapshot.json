@@ -1,0 +1,322 @@
+{
+  "repository": "https://github.com/SylphAI-Inc/atskills.git",
+  "commit": "858802c58636e43d04edae51d4ac5d7c3819decf",
+  "files": [
+    {
+      "path": ".github/CODEOWNERS",
+      "sha256": "dbf8e5af7a56da5a399c486de385dd6093f1f7778e63959c6c7f10e202fbd2a3"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "6c7d15d2ab1a0b51ebcae7e88b9ad01f0713d0833bc2dbe8f3bcc7a81b66b344"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "sha256": "dfc9a77d4cd475f563e0f75451baeecf7f3f221b5688610a8688fe9ac17dddc5"
+    },
+    {
+      "path": "IMPLEMENTATION.md",
+      "sha256": "1861aab1b95e233931b9b45063d400d27b60765795b47df775ac1e2b3a3e0963"
+    },
+    {
+      "path": "INTEGRATION.md",
+      "sha256": "236280d41efe008b9eb7c24c8d789c1f1bb080511005ac07280f242c712164cd"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "682e234746af0012569ca1cd0397ccd35df82c258080c376b94b5abb2fbf1b7a"
+    },
+    {
+      "path": "PROTOCOL.md",
+      "sha256": "9a0543755393c83ee4c4f0026f1275ca2cc9a43e7f5bda60e06437a21b54eda2"
+    },
+    {
+      "path": "README.md",
+      "sha256": "73eb91666b48496c001f5a81c285d344d9af78738d7a2a6ac346aaaf2affdcb3"
+    },
+    {
+      "path": "SKILLS.md",
+      "sha256": "9172bfe44b010dcad1fd747bf811841aadc6ddc16521454fd1f9c6623dff2569"
+    },
+    {
+      "path": "bin/atskills.js",
+      "sha256": "4d74935cf8347eb60539b510d938873f45fab31aa29bf0ca956ebdab65c578fc"
+    },
+    {
+      "path": "bin/ui-basic.js",
+      "sha256": "909d372ce3386fd8844ff727ae88d033d135a00cdb3f35600134c1636418a071"
+    },
+    {
+      "path": "dist/autotrigger.d.ts",
+      "sha256": "3e30a734190ba172fb6b7e679ec2b2e753770701c4f9bb22d19353487652ff94"
+    },
+    {
+      "path": "dist/autotrigger.js",
+      "sha256": "fffb610bb2ae32c140be423964b646cfa8e26853c7ad443248059843f00ec6a9"
+    },
+    {
+      "path": "dist/compose.d.ts",
+      "sha256": "f360d5b738c25cce65aa518a77c69914e21ce7b21b0ba8cfe487f015b059260e"
+    },
+    {
+      "path": "dist/compose.js",
+      "sha256": "6362c1662194262ad537b225f282d98c1d7baafb0703629fba105121ae4f8e84"
+    },
+    {
+      "path": "dist/fsx.d.ts",
+      "sha256": "520889f142883b9a31fec9503ff705fb5eed7520e5ee75cdcd75213cb3f26fbf"
+    },
+    {
+      "path": "dist/fsx.js",
+      "sha256": "32b73e32f0c6f528a01f3b837a0d8f9361bb33326722a27a530541de8cbd2fa5"
+    },
+    {
+      "path": "dist/ids.d.ts",
+      "sha256": "0d5fd38f4404435271d6b7ca98cf9c99d56c7efdccc5956c5497899014803284"
+    },
+    {
+      "path": "dist/ids.js",
+      "sha256": "429d92487a12605b89d4c8b17be18ed978dedabed9b20547b91d9c9be1151181"
+    },
+    {
+      "path": "dist/index.d.ts",
+      "sha256": "d0c3d88bd0e8f0023b63ffd9bca8f19a5c2d02a73f2ca3b777f24f196e60ca61"
+    },
+    {
+      "path": "dist/index.js",
+      "sha256": "bc0f1d7431117ae1c4c1e6c4a4ec7498038d3cf287daba153c49110ca3e415b3"
+    },
+    {
+      "path": "dist/residency.d.ts",
+      "sha256": "249b14b27fa23bced50636f4101be52ace9ab160738cfc1647af1911b8cc81b2"
+    },
+    {
+      "path": "dist/residency.js",
+      "sha256": "3a05e8a4bdc0933797b8e6f987fdd8c8c47e77cc44c0eeffa5b5776e84ced183"
+    },
+    {
+      "path": "dist/resolver.d.ts",
+      "sha256": "ef10bfda68d2b7266a95c7bb812aa8bcfa9acd5bd89ecb3dcfc8d1dc37151e30"
+    },
+    {
+      "path": "dist/resolver.js",
+      "sha256": "4e9466f1bb6f8c71447fc53a8379d1ff019bd8f6365eaa121ea90ffeb64bbe54"
+    },
+    {
+      "path": "dist/tree.d.ts",
+      "sha256": "2f907558e4aaf6864bb927d49256acd64a1c91376078c0250a1fc3b5f801b386"
+    },
+    {
+      "path": "dist/tree.js",
+      "sha256": "96f0ebaa0cfdb695a36f32e7f99c57504c366177519e1b3d3e04e8a9f138b1cb"
+    },
+    {
+      "path": "dist/types.d.ts",
+      "sha256": "79b1bad8bd0f13cf238484e699a3044b0dab989e9269de0176a419db21864bed"
+    },
+    {
+      "path": "dist/types.js",
+      "sha256": "b9b2bef918459322c11a84e00a8ecc33a3f98198233400c7d0759d58774e0e8c"
+    },
+    {
+      "path": "examples/bundle-demo/.atskills/.autotrigger",
+      "sha256": "0d46e46b39470c0254315c672f5a8f62abba0e699b2570b1c71f355897031900"
+    },
+    {
+      "path": "examples/bundle-demo/.atskills/release-runbook/SKILL.md",
+      "sha256": "4cbfe29c67b20b722cec7d789ea2300c240f0555315bb899fad30c056676b761"
+    },
+    {
+      "path": "examples/bundle-demo/.atskills/release-runbook/references/release-checklist.md",
+      "sha256": "d30a673b0fb6ff242b08997088dc7661ddcf81b4f21a272e8952a2930d1c92c7"
+    },
+    {
+      "path": "examples/bundle-demo/.atskills/release-runbook/references/versioning-policy.md",
+      "sha256": "e00664db9aa963b5eb3370fffd2983d020ef32a92ff5c1029e246fa6c954a19b"
+    },
+    {
+      "path": "examples/bundle-demo/.atskills/release-runbook/scripts/check_version.sh",
+      "sha256": "ad7458af5754b9752092b777b6de51a5ae0fc44ac74d240425c6e877cca24e3b"
+    },
+    {
+      "path": "examples/bundle-demo/.atskills/release-runbook/templates/release-notes.md",
+      "sha256": "57d64ed98b1a2c47d9f48b6432cca892c5a256f96ddc24d80a261f022b320443"
+    },
+    {
+      "path": "examples/bundle-demo/README.md",
+      "sha256": "9cc2fd21f3e38591aead30bdc1ff23e75d6129d9f891a2218c2a6b0abd2dd26e"
+    },
+    {
+      "path": "examples/code-review/SKILL.md",
+      "sha256": "0bbb2d8d20e82f04940b928514f71e78b9c0508ac08d887a8bea07b5ec2db87a"
+    },
+    {
+      "path": "examples/demo/.atskills/.autotrigger",
+      "sha256": "2ac995ae66d84c5ede6cb01d09297e2426bc63acacb89acbed8fc8c23af4f7b5"
+    },
+    {
+      "path": "examples/demo/.atskills/my-checklist/SKILL.md",
+      "sha256": "74546c36277b659618713ad062d8b618aec2297023642b0d53be706d43789451"
+    },
+    {
+      "path": "examples/demo/.atskills/writing/commit-messages/SKILL.md",
+      "sha256": "3ae01d0a1e525de095e26b04fa4db8bb287d699f33b0f87dc6bc2d6434042ea6"
+    },
+    {
+      "path": "examples/demo/.atskills/writing/pr-descriptions/SKILL.md",
+      "sha256": "3e75ddc4389cb4f8dc6e472a629540a5067c6d827815464779cbb5396c5507eb"
+    },
+    {
+      "path": "examples/demo/README.md",
+      "sha256": "9861f06d052d21a8325ee00c959315a3369c26e47efc386ec677041e4ecdfc18"
+    },
+    {
+      "path": "examples/simple-tdd/SKILL.md",
+      "sha256": "89c4481f1a37e1d5955712fdccceead779d9fe6bb69ed6124352477254649bb2"
+    },
+    {
+      "path": "examples/team-demo/.atskills/.autotrigger",
+      "sha256": "c9a1aa2a675261f9424f44f9f72bd45be77943f61b6e98e1bdf9a0b8f2468884"
+    },
+    {
+      "path": "examples/team-demo/.atskills/scratch-notes/SKILL.md",
+      "sha256": "012748f4e1e9184c3ba57c2b9f687a8c2a724798454a0010c17f07587c010a28"
+    },
+    {
+      "path": "examples/team-demo/.atskills/sec-checklist/SKILL.md",
+      "sha256": "2ac99009ba484a87cf73db52325ab671cb34c74d7faf8d7827353910217515b5"
+    },
+    {
+      "path": "examples/team-demo/.atskills/team-flows/deploy/SKILL.md",
+      "sha256": "fc4aa149d370ba5f7c7f55a78c54c2be95b1e033f0874e287b450c30d1518bec"
+    },
+    {
+      "path": "examples/team-demo/.atskills/team-flows/review-checklist/SKILL.md",
+      "sha256": "f2102a0d3c7ca76755f318013e1d15bd917c25af8f813b8263008e61b8d8db4b"
+    },
+    {
+      "path": "examples/team-demo/README.md",
+      "sha256": "d53e16a508fb00247c92751ae0bb03a88614f3976bb51dda502cddb7ed5bf949"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "cd3f526a7686a9910ca911080927aee3efede8ccf52bd0f382432dfa04082cc3"
+    },
+    {
+      "path": "package.json",
+      "sha256": "b5d1f5e9479aa9762a4a6b7540b852ef82e8ad46863b1909f5cffc792d218648"
+    },
+    {
+      "path": "src/autotrigger.ts",
+      "sha256": "b5a94edc1bdb1947bf74ea066510a135cd4827e7b3c34837fc6eb8337fffa287"
+    },
+    {
+      "path": "src/compose.ts",
+      "sha256": "8ddcb6bad1447cf7f5eb8922a19600fde8f4e1a7e3079b6749d3356a9dc351e6"
+    },
+    {
+      "path": "src/fsx.ts",
+      "sha256": "8cf231d052717fb6c7f806ddf8d02dcf9fdbad0f8c26a8750136f677437a190e"
+    },
+    {
+      "path": "src/ids.ts",
+      "sha256": "e3e9eb4fbaa8d6dfed1c4fd97a7d06555858d3747dcc2a64f4a536a170ecc95b"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "8cef90c121c074414df1975cac67c27803182e0e45cfed46ea82eaa5fe882a19"
+    },
+    {
+      "path": "src/residency.ts",
+      "sha256": "d5bbfdf32ed6a0e623138d008c224220f2945c464906631d36c217eee5b7094d"
+    },
+    {
+      "path": "src/resolver.ts",
+      "sha256": "a7148d1b21e60a3e3a4c3a02193e78ad39ca31f5e801a0bbfbcb49e88be79af3"
+    },
+    {
+      "path": "src/tree.ts",
+      "sha256": "a35a4ad3ff49b60e0ba4101605fe06f90ae06ca83255a3eb5eef65dec28edbb7"
+    },
+    {
+      "path": "src/types.ts",
+      "sha256": "1c303c90058ae301b2cdb8dcf4d5c0c59d82d3e528f0a1e69b91aab3ad51584e"
+    },
+    {
+      "path": "tests/README.md",
+      "sha256": "2c9ec2bfe207fdc1bb0ea5b0ef507df75986751d7194b9513b60c73fedce4cd3"
+    },
+    {
+      "path": "tests/autotrigger.test.js",
+      "sha256": "4e9aaca69c4a8fe94b7e4416449ace4f7e59a2471d42f4c765be53ec7ba472b9"
+    },
+    {
+      "path": "tests/collection-cap.test.js",
+      "sha256": "ff3069a1426ce8ec50ae9f2dd2414e28994ae92f4efc6eb07c71703be1fbc98a"
+    },
+    {
+      "path": "tests/discovery-exit.test.js",
+      "sha256": "3c79598357b8a7e2c5e4e6e15e1ce0f88755d5b5e16179149ca6dc0a8e283369"
+    },
+    {
+      "path": "tests/discovery.test.js",
+      "sha256": "ed77ddeebf301a616f8561fa7d225848ea098a9e35e7c445390ad6ced5111e7c"
+    },
+    {
+      "path": "tests/e2e-real-repos.sh",
+      "sha256": "f0ac8662ef17ad0a78a8fd1151f62ae05f66a3d740e7df73fe05d3a226055d44"
+    },
+    {
+      "path": "tests/e2e-skills-ui-real.sh",
+      "sha256": "cf791bd8134f5c5a9c8d3f31b656594fb0c92812164100c0aaf0a5033e7435c2"
+    },
+    {
+      "path": "tests/e2e-skills-ui.sh",
+      "sha256": "f71486c10e4020bf722a01a9a9f981f94b46ee81c181abeefd6dbeab77a10239"
+    },
+    {
+      "path": "tests/fsx.test.js",
+      "sha256": "1595799b17ba3e0db352df4b15769f1e98023624b71ab30f63129206ad131318"
+    },
+    {
+      "path": "tests/ids.test.js",
+      "sha256": "29bf8b25e89132fb7be2d4f93a183020fbdeb6a48966b8ee6b7872cb98e4da47"
+    },
+    {
+      "path": "tests/path-grammar.test.js",
+      "sha256": "e799edca805f2f35ea249547d93acc96a5c886f9304d918a8b147b544f4171e0"
+    },
+    {
+      "path": "tests/resolve-many.test.js",
+      "sha256": "bf27156c5a16af5094e272442e13702faa5eda7f47331b5e5a296e9b12fce685"
+    },
+    {
+      "path": "tests/save-gitbase.test.js",
+      "sha256": "664f274d681a02a9e622851bd1774e3b6c9a91fa3084c23cbc8f46b0d82c0c91"
+    },
+    {
+      "path": "tests/ts-core.test.js",
+      "sha256": "5b227ab7496fe4d9abe3cc0fa67acb87998704beeaaa22a4f3c6432e31b51a00"
+    },
+    {
+      "path": "tests/ui-tree.test.js",
+      "sha256": "033ff954cda9d4a44f842b79fe9ef3470468868a0845d9ca426173149145829f"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "34d2357e13f7aa5fa98d5398e118394b9ae3cbda9f12979fb7e35fb1b72b7ff4"
+    },
+    {
+      "path": "ui/.gitignore",
+      "sha256": "504b6bd87f4283bd0230d9d6475554635c514d9c2c53e65108bd2fb427ff66b6"
+    },
+    {
+      "path": "ui/package.json",
+      "sha256": "3674f3ef10fdfc6ff5252c92a3245a1f84ca767db89c4d00c4b55f884d3747eb"
+    },
+    {
+      "path": "ui/skills.tsx",
+      "sha256": "96451f4673ea1ae00949731a0e79f9c95c330aae43d910a950c473820edc84b1"
+    }
+  ]
+}
