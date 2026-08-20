@@ -6,9 +6,9 @@ testable stages.
 
 ## Status
 
-PR 3 adds the prompt parser and resolution adapter on top of the pinned
-upstream runtime. Workspace state, management skill, and hooks are added by
-later implementation stages.
+PR 4 adds workspace-local saved snapshots, `.autotrigger` lifecycle helpers,
+provenance, conflict/size checks, and the offline `.atskills/.codex/index.json`
+index. The management skill and hooks are added by later stages.
 
 ## Prerequisites
 
@@ -31,6 +31,11 @@ npm run check
 `npm run build` verifies the pinned snapshot and regenerates the checked-in
 runtime bundle entirely offline. `npm run check` runs that build and the tests
 together.
+
+Workspace state is written under the current workspace's `.atskills/` only:
+saved skill trees carry a two-line `.source` provenance stamp, and the derived
+index at `.atskills/.codex/index.json` can be rebuilt without network access.
+Saved snapshots are limited to 4 MiB and 64 files.
 
 The only networked maintenance command is the explicit upstream refresh:
 
@@ -65,6 +70,7 @@ marketplace source when the plugin is ready for manual testing.
 │   ├── hooks/
 │   ├── runtime/atskills.mjs
 │   ├── runtime/core.mjs
+│   ├── runtime/state.mjs
 │   └── skills/
 ├── scripts/build.mjs
 ├── scripts/refresh-upstream.mjs
