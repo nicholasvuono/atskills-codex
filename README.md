@@ -6,9 +6,10 @@ testable stages.
 
 ## Status
 
-PR 4 adds workspace-local saved snapshots, `.autotrigger` lifecycle helpers,
-provenance, conflict/size checks, and the offline `.atskills/.codex/index.json`
-index. The management skill and hooks are added by later stages.
+PR 6 adds the `$atskills` management CLI plus prompt and session hooks. Hooks
+resolve only on-demand references, inject metadata and absolute `SKILL.md`
+paths, and restore local `.autotrigger` state without network access at session
+start.
 
 ## Prerequisites
 
@@ -68,6 +69,8 @@ marketplace source when the plugin is ready for manual testing.
 ├── plugins/atskills-codex/
 │   ├── .codex-plugin/plugin.json
 │   ├── hooks/
+│   │   ├── hooks.json
+│   │   └── atskills.mjs
 │   ├── runtime/atskills.mjs
 │   ├── runtime/core.mjs
 │   ├── runtime/state.mjs

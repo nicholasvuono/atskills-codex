@@ -20,6 +20,7 @@ const requiredDirectories = [
 const requiredFiles = [
   join(repositoryRoot, ".agents", "plugins", "marketplace.json"),
   join(pluginRoot, ".codex-plugin", "plugin.json"),
+  join(pluginRoot, "hooks", "hooks.json"),
   join(repositoryRoot, "package-lock.json"),
   join(repositoryRoot, "upstream.json"),
   snapshotManifestPath,
