@@ -6,10 +6,8 @@ testable stages.
 
 ## Status
 
-PR 6 adds the `$atskills` management CLI plus prompt and session hooks. Hooks
-resolve only on-demand references, inject metadata and absolute `SKILL.md`
-paths, and restore local `.autotrigger` state without network access at session
-start.
+PR 7 completes the integration, security, and release-readiness checks for the
+`$atskills` management CLI plus prompt and session hooks.
 
 ## Prerequisites
 
@@ -29,9 +27,12 @@ npm run build
 npm run check
 ```
 
+Release installation, maintenance, cachebuster, and troubleshooting steps are
+in [`RELEASE.md`](RELEASE.md).
+
 `npm run build` verifies the pinned snapshot and regenerates the checked-in
-runtime bundle entirely offline. `npm run check` runs that build and the tests
-together.
+runtime bundle entirely offline. `npm run check` adds release metadata,
+available plugin-validator, and full test checks.
 
 Workspace state is written under the current workspace's `.atskills/` only:
 saved skill trees carry a two-line `.source` provenance stamp, and the derived

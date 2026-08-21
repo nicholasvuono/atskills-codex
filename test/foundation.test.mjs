@@ -16,7 +16,7 @@ test("package declares the supported Node.js runtime and foundation scripts", as
   assert.equal(packageJson.engines.node, ">=20");
   assert.equal(packageJson.scripts.build, "node scripts/build.mjs");
   assert.equal(packageJson.scripts.test, "node --test test/*.test.mjs");
-  assert.equal(packageJson.scripts.check, "npm run build && npm test");
+  assert.equal(packageJson.scripts.check, "node scripts/check.mjs");
 });
 
 test("plugin manifest has valid PR 1 metadata", async () => {

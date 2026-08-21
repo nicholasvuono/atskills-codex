@@ -2,7 +2,8 @@
 
 import { existsSync, statSync } from "node:fs";
 import { isAbsolute } from "node:path";
-import { diskPath, normalizeId, resolveSkill } from "../../../runtime/atskills.mjs";
+import { diskPath, normalizeId } from "../../../runtime/atskills.mjs";
+import { resolveSkill } from "../../../runtime/core.mjs";
 import {
   installSkill,
   readProvenance,

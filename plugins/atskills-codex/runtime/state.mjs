@@ -11,11 +11,10 @@ import {
   normalizeId,
   parseTriggers,
   removeTriggerLine,
-  resolveSkill,
+  resolveSkill as upstreamResolveSkill,
   saveSkillToProject as upstreamSaveSkillToProject,
   safeJoin,
   skillsRoot,
-  walkSkills,
   writeFileAtomic,
   SOURCE_FILE,
   DEFAULT_CACHE_DIR,
@@ -33,6 +32,11 @@ import {
 } from "node:fs";
 import { dirname, join, sep } from "node:path";
 import { tmpdir } from "node:os";
+import {
+  isSafeWorkspacePath,
+  MAX_SKILL_BYTES,
+  resolveSafely,
+} from "./security.mjs";
 
 export const MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024;
 export const MAX_SNAPSHOT_FILES = 64;
@@ -45,7 +49,7 @@ function errorMessage(error) {
 function resultCode(message, fallback = "NETWORK") {
   const text = String(message);
   if (/invalid|empty skill path|path escapes/i.test(text)) return "INVALID_REF";
-  if (/too large|over the \d+|exceed/i.test(text)) return "TOO_LARGE";
+  if (/too large|over the \d+|maximum is|exceed/i.test(text)) return "TOO_LARGE";
   if (/conflict|already exists|edited|project's own work/i.test(text)) return "CONFLICT";
   if (/no skill|nothing at|not found|no skills under/i.test(text)) return "NOT_FOUND";
   return fallback;
@@ -67,6 +71,10 @@ function success(extra = {}) {
 
 function workingDirectory(options = {}) {
   return options.workingDir ?? process.cwd();
+}
+
+function resolveSkill(id, save, options, install = false) {
+  return resolveSafely(upstreamResolveSkill, id, save, options, install);
 }
 
 function stateId(raw) {
@@ -121,6 +129,60 @@ function snapshotStats(dir) {
 
   visit(dir);
   return totals;
+}
+
+function walkWorkspaceSkills(root, rel = "") {
+  const dir = rel ? join(root, rel) : root;
+  let current;
+  try {
+    current = lstatSync(dir);
+  } catch {
+    return [];
+  }
+  if (!current.isDirectory() || current.isSymbolicLink()) return [];
+  const skillFile = join(dir, "SKILL.md");
+  try {
+    const file = lstatSync(skillFile);
+    if (file.isFile()) return [{ rel, dir }];
+  } catch {
+    // Continue into a namespace directory.
+  }
+
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink() && entry.name !== ".git")
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => walkWorkspaceSkills(root, rel ? `${rel}/${entry.name}` : entry.name));
+}
+
+function safeIndex(index, root) {
+  if (!index || typeof index !== "object") return index;
+  const skills = Array.isArray(index.skills)
+    ? index.skills.filter((skill) => !skill?.path || isSafeWorkspacePath(root, skill.path, true))
+    : [];
+  const provenance = Array.isArray(index.provenance)
+    ? index.provenance.filter((record) => !record?.path || isSafeWorkspacePath(root, record.path, true))
+    : [];
+  const resident = Array.isArray(index.resident)
+    ? index.resident
+        .filter((entry) => !entry?.file || isSafeWorkspacePath(root, entry.file, true))
+        .map((entry) => ({ ...entry, ...(entry?.id ? { id: canonicalStateId(entry.id) } : {}) }))
+    : [];
+  return { ...index, skills, provenance, resident };
+}
+
+function canonicalStateId(raw) {
+  if (typeof raw !== "string") return raw;
+  try {
+    return normalizeId(raw);
+  } catch {
+    return raw;
+  }
 }
 
 function snapshotLimitError(stats) {
@@ -232,7 +294,10 @@ export async function saveSkill(rawId, options = {}) {
   }
   if (!resolved?.success) {
     if (preflightTemp) rmSync(preflightTemp, { recursive: true, force: true });
-    return failure(resultCode(resolved?.error, "NOT_FOUND"), resolved?.error ?? `Unable to resolve '${id}'`);
+    return failure(
+      resolved?.code ?? resultCode(resolved?.error, "NOT_FOUND"),
+      resolved?.error ?? `Unable to resolve '${id}'`,
+    );
   }
 
   const sourceDir = resolved.dir ?? (resolved.path ? dirname(resolved.path) : null);
@@ -252,6 +317,9 @@ export async function saveSkill(rawId, options = {}) {
   if (limitError) return failure("TOO_LARGE", limitError, { bytes: stats.bytes, files: stats.files });
 
   const dest = targetPath(id, workingDir);
+  if (!isSafeWorkspacePath(skillsRoot(workingDir), dest)) {
+    return failure("INVALID_REF", `refusing unsafe saved-skill path for '${id}'`);
+  }
   let retired = null;
   if (options.force && existsSync(dest)) {
     retired = retiredPath(dest);
@@ -314,7 +382,10 @@ export async function installSkill(rawId, options = {}) {
     return failure(resultCode(errorMessage(error)), errorMessage(error));
   }
   if (!resolved?.success) {
-    return failure(resultCode(resolved?.error, "NOT_FOUND"), resolved?.error ?? `Unable to resolve '${id}'`);
+    return failure(
+      resolved?.code ?? resultCode(resolved?.error, "NOT_FOUND"),
+      resolved?.error ?? `Unable to resolve '${id}'`,
+    );
   }
 
   const line = installLineFor(skillsRoot(workingDir), id);
@@ -368,6 +439,9 @@ export function removeSkill(rawId, options = {}) {
   const workingDir = workingDirectory(options);
   const root = skillsRoot(workingDir);
   const dest = targetPath(id, workingDir);
+  if (!isSafeWorkspacePath(root, dest)) {
+    return failure("CONFLICT", `refusing unsafe saved-skill path for '${id}'`);
+  }
   if (!existsSync(dest)) return failure("NOT_FOUND", `saved skill '${id}' does not exist`);
   if (lstatSync(dest).isSymbolicLink() || !statSync(dest).isDirectory()) {
     return failure("CONFLICT", `saved skill '${id}' is not a directory`);
@@ -403,8 +477,17 @@ export function removeSkill(rawId, options = {}) {
 function skillMetadata(root, skill) {
   const dir = skill.dir;
   const id = normalizeId(skill.rel);
+  if (!isSafeWorkspacePath(root, dir, true)) {
+    throw new Error("skill path is symlinked or outside .atskills");
+  }
+  const skillFile = join(dir, "SKILL.md");
+  const skillStat = lstatSync(skillFile);
+  if (!skillStat.isFile()) throw new Error("SKILL.md is not a regular file");
+  if (skillStat.size > MAX_SKILL_BYTES) {
+    throw new Error(`SKILL.md is ${skillStat.size} bytes; maximum is ${MAX_SKILL_BYTES}`);
+  }
   const stamp = nearestSource(dir, root);
-  const meta = frontmatter(readFileSync(join(dir, "SKILL.md"), "utf8"));
+  const meta = frontmatter(readFileSync(skillFile, "utf8"));
   let stats;
   try {
     stats = snapshotStats(dir);
@@ -413,7 +496,7 @@ function skillMetadata(root, skill) {
   }
   return {
     id,
-    path: join(dir, "SKILL.md"),
+    path: skillFile,
     name: meta.name,
     description: meta.description,
     saved: Boolean(stamp),
@@ -434,7 +517,7 @@ export function rebuildWorkspaceIndex(workingDir = process.cwd()) {
   const paths = workspacePaths(workingDir);
   mkdirSync(paths.codex, { recursive: true });
   const skills = [];
-  for (const skill of walkSkills(paths.root)) {
+  for (const skill of walkWorkspaceSkills(paths.root)) {
     try {
       skills.push(skillMetadata(paths.root, skill));
     } catch (error) {
@@ -449,7 +532,9 @@ export function rebuildWorkspaceIndex(workingDir = process.cwd()) {
       .filter((skill) => skill.saved)
       .map((skill) => ({ id: skill.id, ...skill.provenance, path: skill.path })),
     triggers: parseTriggers(paths.root),
-    resident: expandLocalTriggers(paths.root),
+    resident: expandLocalTriggers(paths.root)
+      .filter((entry) => !entry.file || isSafeWorkspacePath(paths.root, entry.file, true))
+      .map((entry) => ({ ...entry, ...(entry?.id ? { id: canonicalStateId(entry.id) } : {}) })),
   };
   writeFileAtomic(paths.index, `${JSON.stringify(index, null, 2)}\n`);
   return index;
@@ -466,12 +551,14 @@ export function readWorkspaceIndex(workingDir = process.cwd()) {
 /** Read saved metadata without invoking the resolver or the network. */
 export function readWorkspaceState(workingDir = process.cwd()) {
   const paths = workspacePaths(workingDir);
-  const index = readWorkspaceIndex(workingDir);
+  const index = safeIndex(readWorkspaceIndex(workingDir), paths.root);
   return {
     paths,
     index,
     triggers: parseTriggers(paths.root),
-    resident: expandLocalTriggers(paths.root),
+    resident: expandLocalTriggers(paths.root)
+      .filter((entry) => !entry.file || isSafeWorkspacePath(paths.root, entry.file, true))
+      .map((entry) => ({ ...entry, ...(entry?.id ? { id: canonicalStateId(entry.id) } : {}) })),
     skills: index?.skills ?? [],
     provenance: index?.provenance ?? [],
   };
@@ -483,6 +570,7 @@ export function readProvenance(rawId, workingDir = process.cwd()) {
   const root = skillsRoot(workingDir);
   const dest = targetPath(id, workingDir);
   if (!existsSync(dest)) return null;
+  if (!isSafeWorkspacePath(root, dest, true)) return null;
   const stamp = nearestSource(dest, root);
   if (!stamp) return null;
   return {

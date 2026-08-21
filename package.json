@@ -11,6 +11,6 @@
     "build": "node scripts/build.mjs",
     "refresh:upstream": "node scripts/refresh-upstream.mjs",
     "test": "node --test test/*.test.mjs",
-    "check": "npm run build && npm test"
+    "check": "node scripts/check.mjs"
   }
 }

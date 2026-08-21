@@ -1,5 +1,6 @@
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { realpathSync } from "node:fs";
 
 export const MAX_REFERENCES = 8;
 export const MAX_CONTEXT_BYTES = 8 * 1024;
@@ -315,4 +316,5 @@ export async function main() {
   }
 }
 
-if (resolve(process.argv[1] || "") === hookFile) await main();
+const invokedFile = process.argv[1] ? realpathSync(resolve(process.argv[1])) : "";
+if (invokedFile === realpathSync(hookFile)) await main();
