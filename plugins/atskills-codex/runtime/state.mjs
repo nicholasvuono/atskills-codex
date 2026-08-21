@@ -471,6 +471,7 @@ export function readWorkspaceState(workingDir = process.cwd()) {
     paths,
     index,
     triggers: parseTriggers(paths.root),
+    resident: expandLocalTriggers(paths.root),
     skills: index?.skills ?? [],
     provenance: index?.provenance ?? [],
   };

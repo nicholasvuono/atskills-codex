@@ -1,0 +1,30 @@
+{
+  "description": "Load AtSkills references on demand and restore local session state.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/atskills.mjs\"",
+            "timeout": 60,
+            "additionalContextLimit": 2000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/atskills.mjs\"",
+            "timeout": 5,
+            "additionalContextLimit": 2000
+          }
+        ]
+      }
+    ]
+  }
+}
