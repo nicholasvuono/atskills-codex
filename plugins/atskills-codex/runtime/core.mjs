@@ -1,8 +1,9 @@
 import {
   parseReference,
   resolveMany,
-  resolveSkill,
+  resolveSkill as upstreamResolveSkill,
 } from "./atskills.mjs";
+import { resolveSafely } from "./security.mjs";
 import {
   installSkill,
   removeSkill,
@@ -14,6 +15,10 @@ const skillReference = /(?<![\p{L}\p{N}_@])@(?:skills|workflow):[^\s]*/gu;
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
+}
+
+export function resolveSkill(id, save, opts, install = false) {
+  return resolveSafely(upstreamResolveSkill, id, save, opts, install);
 }
 
 /** Find @skills: references without making a bad reference abort the prompt. */
