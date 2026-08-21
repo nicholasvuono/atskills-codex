@@ -1,0 +1,6 @@
+interface:
+  display_name: "AtSkills for Codex"
+  short_description: "Load and manage skills on demand in Codex"
+  default_prompt: "Use $atskills to load and manage an on-demand skill."
+policy:
+  allow_implicit_invocation: true
