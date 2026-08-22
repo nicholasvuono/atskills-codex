@@ -36,6 +36,7 @@ async function snapshotFiles(root, prefix = "") {
   );
   const files = [];
   for (const entry of entries) {
+    if (entry.name === ".DS_Store") continue;
     const path = prefix ? join(prefix, entry.name) : entry.name;
     if (entry.isDirectory()) {
       files.push(...(await snapshotFiles(root, path)));
