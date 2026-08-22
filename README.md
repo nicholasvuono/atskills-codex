@@ -14,7 +14,7 @@
 ## See it in action
 
 <p align="center">
-  <img src="assets/atskills-inspect-rounded.png" alt="AtSkills for Codex inspecting a GitHub-hosted skill" width="720">
+  <img src="assets/atskills-save-and-use.png" alt="AtSkills for Codex saving and using a GitHub-hosted skill" width="720">
 </p>
 
 [Open the interactive diagrams on GitHub Pages →](https://nicholasvuono.github.io/atskills-codex/)
