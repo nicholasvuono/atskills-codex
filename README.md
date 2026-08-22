@@ -11,6 +11,14 @@
 - **Local or GitHub-hosted:** use skills from your workspace or a public repository.
 - **Safer by default:** resolved skill files are treated as instructions; bundled scripts are not executed automatically.
 
+## See it in action
+
+<p align="center">
+  <img src="assets/atskills-inspect-rounded.png" alt="AtSkills for Codex inspecting a GitHub-hosted skill" width="720">
+</p>
+
+[Open the interactive diagrams on GitHub Pages →](https://nicholasvuono.github.io/atskills-codex/)
+
 ## Quick setup
 
 Requirements: the Codex CLI, Node.js 20+, and Git for GitHub-hosted skills.
