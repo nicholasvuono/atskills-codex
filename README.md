@@ -1,102 +1,93 @@
-# atskills-codex
+# @skills for Codex
 
-`atskills-codex` is a local Codex plugin for loading skills on demand with the
-`@skills:` workflow. The repository is being built in small, independently
-testable stages.
+`atskills-codex` lets Codex load local or GitHub-hosted skills on demand with
+`@skills:` references.
 
-## Status
+## Why use it?
 
-PR 7 completes the integration, security, and release-readiness checks for the
-`$atskills` management CLI plus prompt and session hooks.
+- **Less context overhead:** skill instructions load when referenced instead of all at once.
+- **Explicit workflows:** name the exact skill you want Codex to use.
+- **Reusable skills:** keep one `SKILL.md` and use it across workspaces.
+- **Local or GitHub-hosted:** use skills from your workspace or a public repository.
+- **Safer by default:** resolved skill files are treated as instructions; bundled scripts are not executed automatically.
 
-## Prerequisites
+## Quick setup
 
-- Node.js 20 or newer
-- Python 3 for the Codex plugin validator
+Requirements: the Codex CLI, Node.js 20+, and Git for GitHub-hosted skills.
 
-The checked-in plugin runtime has no `node_modules` requirement and does not
-perform installation or network access at runtime.
-
-## Local development
-
-Run these commands from the repository root:
+Install the plugin:
 
 ```sh
-npm test
-npm run build
-npm run check
+codex plugin marketplace add nicholasvuono/atskills-codex --ref main
+codex plugin add atskills-codex@atskills-local
 ```
 
-Release installation, maintenance, cachebuster, and troubleshooting steps are
-in [`RELEASE.md`](RELEASE.md).
+Start a new Codex task, open `/hooks`, and review/trust the `atskills-codex`
+hooks when prompted.
 
-`npm run build` verifies the pinned snapshot and regenerates the checked-in
-runtime bundle entirely offline. `npm run check` adds release metadata,
-available plugin-validator, and full test checks.
+## Use a GitHub-hosted skill
 
-Workspace state is written under the current workspace's `.atskills/` only:
-saved skill trees carry a two-line `.source` provenance stamp, and the derived
-index at `.atskills/.codex/index.json` can be rebuilt without network access.
-Saved snapshots are limited to 4 MiB and 64 files.
-
-The only networked maintenance command is the explicit upstream refresh:
-
-```sh
-npm run refresh:upstream
-```
-
-It fetches the SHA in [`upstream.json`](upstream.json), verifies the resolved
-`HEAD`, refreshes `vendor/atskills/`, its integrity manifest, and the complete
-third-party notice. Do not use it during ordinary builds or tests.
-
-Validate the plugin manifest directly with the bundled Codex validator:
-
-```sh
-REPO_ROOT=/path/to/atskills-codex
-python3 /path/to/plugin-creator/scripts/validate_plugin.py \
-  "$REPO_ROOT/plugins/atskills-codex"
-```
-
-The repository marketplace is intentionally checked in at
-`.agents/plugins/marketplace.json`. Its plugin source path is relative to the
-repository root, so local installation can use the repository as the
-marketplace source when the plugin is ready for manual testing.
-
-## Repository layout
+Reference the directory that contains the skill’s `SKILL.md`:
 
 ```text
-.
-├── .agents/plugins/marketplace.json
-├── plugins/atskills-codex/
-│   ├── .codex-plugin/plugin.json
-│   ├── hooks/
-│   │   ├── hooks.json
-│   │   └── atskills.mjs
-│   ├── runtime/atskills.mjs
-│   ├── runtime/core.mjs
-│   ├── runtime/state.mjs
-│   └── skills/
-├── scripts/build.mjs
-├── scripts/refresh-upstream.mjs
-├── test/
-├── upstream.json
-├── vendor/atskills/
-├── vendor/atskills.snapshot.json
-├── vendor/ignore/
-├── LICENSE
-├── THIRD_PARTY_NOTICES.md
-├── package.json
-└── package-lock.json
+Use @skills:gh:OWNER/REPOSITORY/PATH to help with this task.
 ```
 
-`.atskills/` is workspace-local state and is ignored by Git. Temporary
-upstream refresh checkouts and root build output are also ignored. The
-`vendor/` snapshot and generated plugin runtime are intentionally checked in.
+Example:
 
-## Scope and provenance
+```text
+Use @skills:gh:SylphAI-Inc/atskills/examples/simple-tdd.
+```
 
-The runtime adapts the pinned `SylphAI-Inc/atskills` implementation described
-in [`upstream.json`](upstream.json). The source snapshot is checked against
-[`vendor/atskills.snapshot.json`](vendor/atskills.snapshot.json) before every
-build. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the exact
-upstream revision and license text.
+## Use a local skill
+
+Local skills live in the workspace where Codex is running. They are not part of
+the installed plugin and are not global: a skill in
+`/path/to/project/.atskills/` is available to that project, not automatically
+to your other workspaces. The `.atskills/` directory is workspace state and is
+ignored by Git by default, so use a GitHub reference when a team should share a
+skill.
+
+Copy a skill into `.atskills/<name>/` so the directory contains `SKILL.md`:
+
+```sh
+mkdir -p .atskills/my-skill
+cp -R /path/to/my-skill/. .atskills/my-skill/
+```
+
+Then reference it by name:
+
+```text
+Use @skills:my-skill to help with this task.
+```
+
+List skills available in the current workspace:
+
+```text
+Use $atskills to list the available skills.
+```
+
+## Manage skills with `$atskills`
+
+Ask Codex to manage the workspace-local skill state:
+
+```text
+Use $atskills to inspect @skills:gh:OWNER/REPOSITORY/PATH.
+Use $atskills to save @skills:gh:OWNER/REPOSITORY/PATH for reuse in this workspace.
+Use $atskills to install @skills:gh:OWNER/REPOSITORY/PATH as an automatic trigger.
+Use $atskills to show the workspace's automatic skill triggers.
+Use $atskills to show the provenance of @skills:my-skill.
+Use $atskills to uninstall @skills:my-skill from automatic triggers.
+Use $atskills to remove the saved local copy of @skills:my-skill.
+```
+
+`save` keeps a detached copy under `.atskills/`. `install` adds an entry to
+`.atskills/.autotrigger` for automatic routing; it does not necessarily save a
+copy. `uninstall` removes that automatic entry but keeps a saved copy. Removing
+a saved copy requires explicit confirmation.
+
+## More information
+
+- [Install, update, remove, and troubleshoot](Integration.md)
+- [CLI command reference](plugins/atskills-codex/skills/atskills/references/cli.md)
+- [Release and maintenance notes](RELEASE.md)

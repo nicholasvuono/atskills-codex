@@ -1,0 +1,731 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codex Skills With and Without @skills</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --blue: #2575f6;
+            --blue-2: #5ca5ff;
+            --blue-soft: rgba(37, 117, 246, .15);
+            --green: #80cbc4;
+            --ink: #f5f5f5;
+            --navy: #0d0d0d;
+            --muted: #b0b0b0;
+            --line: rgba(255, 255, 255, .12);
+            --soft: #242424;
+            --surface: #1e1e1e;
+            --bg: #121212;
+            --white: #f5f5f5;
+            --codex-color: #ef9a9a;
+            --skills-color: #2575f6;
+            --radius: 8px;
+            --shadow: 0 6px 18px rgba(0, 0, 0, .38);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.6;
+        }
+
+        .container {
+            width: min(100% - 40px, 1000px);
+            margin: 0 auto;
+            padding-bottom: 72px;
+        }
+
+        .hero {
+            padding: 88px 0 64px;
+            max-width: 840px;
+        }
+
+        .eyebrow {
+            margin: 0 0 16px;
+            color: var(--blue);
+            font-size: .78rem;
+            font-weight: 800;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            font-family: "SFMono-Regular", Consolas, monospace;
+        }
+
+        .hero h1 {
+            max-width: 780px;
+            margin: 0 0 22px;
+            color: var(--ink);
+            font-size: clamp(2.8rem, 7vw, 4.7rem);
+            font-weight: 700;
+            letter-spacing: -.045em;
+            line-height: .98;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(90deg, var(--blue), var(--blue-2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero > p:not(.eyebrow) {
+            max-width: 720px;
+            margin: 0;
+            color: var(--muted);
+            font-size: clamp(1.08rem, 2vw, 1.28rem);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 0 0 64px;
+        }
+
+        .summary-card {
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+
+        .summary-card strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 1rem;
+        }
+
+        .summary-card span {
+            color: var(--muted);
+            font-size: .92rem;
+        }
+
+        .article-section {
+            display: grid;
+            gap: 72px;
+        }
+
+        .content-block { min-width: 0; scroll-margin-top: 24px; }
+
+        .section-heading {
+            display: grid;
+            grid-template-columns: 48px 1fr;
+            gap: 18px;
+            align-items: start;
+            margin-bottom: 24px;
+        }
+
+        .section-number {
+            display: grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            color: var(--blue);
+            background: var(--blue-soft);
+            font-weight: 900;
+        }
+
+        h2 {
+            margin: 0;
+            color: var(--ink);
+            font-size: clamp(1.8rem, 4vw, 2.55rem);
+            letter-spacing: -.04em;
+            line-height: 1.1;
+        }
+
+        h3 {
+            margin: 28px 0 10px;
+            color: var(--ink);
+            font-size: 1.15rem;
+            letter-spacing: -.015em;
+        }
+
+        p, li { color: var(--muted); }
+        p { margin: 0 0 16px; }
+        ul { margin: 12px 0 24px; padding-left: 1.3rem; }
+        li { margin: 8px 0; }
+        strong { color: var(--ink); }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .comparison article {
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+
+        .comparison h3 { margin-top: 0; }
+        .comparison p:last-child { margin-bottom: 0; }
+
+        .highlight-box {
+            padding: 22px 24px;
+            margin: 24px 0;
+            border: 1px solid rgba(37, 117, 246, .38);
+            border-radius: 8px;
+            background: var(--blue-soft);
+            box-shadow: var(--shadow);
+        }
+
+        .highlight-box p { margin: 0; color: #c9d1d9; }
+
+        .simulator-container {
+            margin-top: 32px;
+            padding: clamp(22px, 4vw, 36px);
+            overflow: hidden;
+            color: var(--white);
+            background:
+                linear-gradient(135deg, rgba(37, 117, 246, .07), transparent 45%),
+                var(--navy);
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+        }
+
+        .simulator-kicker {
+            margin: 0 0 6px;
+            color: var(--blue-2);
+            font-size: .72rem;
+            font-weight: 800;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+
+        .simulator-title {
+            margin: 0 0 6px;
+            color: var(--white);
+            font-size: clamp(1.35rem, 3vw, 1.8rem);
+            letter-spacing: -.025em;
+        }
+
+        .simulator-description {
+            margin-bottom: 24px;
+            color: var(--muted);
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+            padding: 20px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            background: var(--soft);
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 240px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            color: var(--white);
+            font-size: .88rem;
+            font-weight: 700;
+        }
+
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--blue-2); }
+
+        .radio-group { display: flex; gap: 16px; flex-wrap: wrap; }
+
+        .radio-label {
+            align-items: center;
+            justify-content: flex-start;
+            gap: 7px;
+            color: #d0d0d0;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .viz-container { width: 100%; height: 400px; position: relative; }
+        .viz-container text, .viz-container .tick text { fill: var(--muted); }
+        .viz-container .domain, .viz-container .tick line { stroke: #666; }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--line);
+        }
+
+        .stat-box {
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            background: var(--soft);
+            text-align: left;
+        }
+
+        .stat-title {
+            margin-bottom: 4px;
+            color: var(--muted);
+            font-size: .72rem;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .stat-value { font-size: 1.9rem; font-weight: 900; line-height: 1.15; }
+        .codex-val { color: var(--codex-color); }
+        .skills-val { color: var(--skills-color); }
+
+        #bloat-viz { display: flex; gap: 16px; height: 300px; }
+
+        .context-window {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column-reverse;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            background: var(--surface);
+        }
+
+        .window-label {
+            position: absolute;
+            top: 14px;
+            z-index: 10;
+            width: 100%;
+            color: #c9d1d9;
+            font-size: .84rem;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .token-block { width: 100%; transition: height .3s ease; }
+        .metadata-block { background: rgba(239, 154, 154, .62); border-top: 1px solid var(--codex-color); }
+        .execution-block { background: rgba(37, 117, 246, .62); border-top: 1px solid var(--blue-2); }
+
+        .assumption {
+            margin: 16px 0 0;
+            color: var(--muted);
+            font-size: .78rem;
+        }
+
+        .stats-panel .assumption { grid-column: 1 / -1; }
+
+        .tooltip {
+            position: absolute;
+            z-index: 100;
+            padding: 8px 12px;
+            border-radius: 8px;
+            opacity: 0;
+            color: var(--white);
+            background: #2b2b2b;
+            box-shadow: var(--shadow);
+            font-size: 12px;
+            pointer-events: none;
+            transition: opacity .2s;
+        }
+
+        .tiers {
+            width: 100%;
+            margin: 24px 0;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th, td { padding: 14px 16px; border-bottom: 1px solid var(--line); text-align: left; }
+        th { color: var(--ink); background: var(--soft); font-size: .82rem; }
+        td { color: var(--muted); font-size: .92rem; }
+        tr:last-child td { border-bottom: 0; }
+
+        code {
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--blue-2);
+            background: var(--blue-soft);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: .88em;
+        }
+
+        .footer {
+            margin-top: 72px;
+            padding: 28px 0 0;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: .82rem;
+        }
+
+        @media (max-width: 720px) {
+            .hero { padding: 64px 0 48px; }
+            .summary-grid, .comparison { grid-template-columns: 1fr; }
+            .article-section { gap: 56px; }
+            .section-heading { grid-template-columns: 40px 1fr; gap: 14px; }
+            .section-number { width: 40px; height: 40px; border-radius: 4px; }
+            .controls { padding: 16px; }
+            .control-group { min-width: 100%; }
+            #bloat-viz { height: 240px; }
+            .stats-panel { grid-template-columns: 1fr; }
+            .tiers { display: block; width: 100%; max-width: 100%; overflow-x: auto; white-space: nowrap; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <section class="hero">
+            <p class="eyebrow">Codex + @skills</p>
+            <h1>Codex skills, with and without <span>@skills.</span></h1>
+            <p>Compare Codex’s installed skill system with Codex using @skills for explicit, on-demand delivery.</p>
+        </section>
+
+        <section class="summary-grid" aria-label="Key takeaways">
+            <div class="summary-card"><strong>Codex alone</strong><span>Installed skill metadata supports automatic discovery and routing.</span></div>
+            <div class="summary-card"><strong>Codex + @skills</strong><span>Referenced skills load only when their address is named.</span></div>
+            <div class="summary-card"><strong>Choose per workflow</strong><span>Use automatic routing where it helps and explicit paths where precision matters.</span></div>
+        </section>
+
+        <article class="article-section">
+            <section class="content-block">
+                <div class="section-heading">
+                    <span class="section-number">01</span>
+                    <div><p class="eyebrow">Context efficiency</p><h2>What stays in the prompt?</h2></div>
+                </div>
+                <p>This page compares two ways to use skills in Codex: installed Codex skills on their own, and skills delivered to Codex through <code>@skills</code>.</p>
+
+                <div class="comparison">
+                    <article>
+                        <h3>Codex without @skills</h3>
+                        <p>Installed skills contribute lightweight metadata up front. Full instructions load after Codex selects a skill.</p>
+                    </article>
+                    <article>
+                        <h3>Codex with @skills</h3>
+                        <p><code>@skills</code> delivers a skill to Codex when its address appears in the prompt. Unreferenced skills add no resident context.</p>
+                    </article>
+                </div>
+
+                <div class="highlight-box">
+                    <p><strong>The tradeoff:</strong> native Codex skills make automatic discovery convenient; adding @skills gives Codex a lower-context, explicitly addressed path.</p>
+                </div>
+
+                <table class="tiers">
+                    <thead><tr><th>Codex + @skills mode</th><th>What happens</th><th>Resident context</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>Reference</strong></td><td>Call a path such as <code>@skills:gh:owner/repo</code>.</td><td>None until use</td></tr>
+                        <tr><td><strong>Saved</strong></td><td>Save locally for faster reuse and autocomplete.</td><td>None until use</td></tr>
+                        <tr><td><strong>Installed</strong></td><td>Add metadata for automatic routing.</td><td>Metadata only</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="simulator-container">
+                    <p class="simulator-kicker">Simulator 01</p>
+                    <h3 class="simulator-title">Context cost inside Codex</h3>
+                    <p class="simulator-description">Compare installed Codex skills with skills referenced through @skills.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>
+                            Installed skills
+                            <span id="bloat-skills-val">50</span>
+                        </label>
+                        <input type="range" id="bloat-skills-slider" min="1" max="200" value="50">
+                    </div>
+                    <div class="control-group">
+                        <label>Agent phase</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="phase" value="idle" checked> Idle / planning</label>
+                            <label class="radio-label"><input type="radio" name="phase" value="execute"> Executing a skill</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bloat-viz">
+                    <div class="context-window" id="codex-window">
+                        <div class="window-label">Codex without @skills</div>
+                        <div class="token-block execution-block" id="codex-exec-block" style="height: 0%;"></div>
+                        <div class="token-block metadata-block" id="codex-meta-block"></div>
+                    </div>
+                    <div class="context-window" id="skills-window">
+                        <div class="window-label">Codex with @skills</div>
+                        <div class="token-block execution-block" id="skills-exec-block" style="height: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <div class="stat-box">
+                        <div class="stat-title">Codex resident metadata</div>
+                        <div class="stat-value codex-val" id="codex-wasted-tokens">2,000</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">@skills resident metadata</div>
+                        <div class="stat-value skills-val" id="skills-wasted-tokens">0</div>
+                    </div>
+                    <p class="assumption">Illustrative model: 40 metadata tokens per installed Codex skill and a 1,500-token execution payload. Referenced @skills content is counted only when used.</p>
+                </div>
+            </section>
+
+            <section class="content-block">
+                <div class="section-heading">
+                    <span class="section-number">02</span>
+                    <div><p class="eyebrow">Workflow reliability</p><h2>How does the agent choose each step?</h2></div>
+                </div>
+                <p>Without explicit addresses, Codex must select the right installed skill at every step. With @skills, the prompt can name each dependency directly.</p>
+
+                <div class="comparison">
+                    <article>
+                        <h3>Codex without @skills</h3>
+                        <p>Codex matches each task to installed skill metadata. It is flexible, but every added routing decision introduces another chance to misroute.</p>
+                    </article>
+                    <article>
+                        <h3>Codex with @skills</h3>
+                        <p>The prompt names the skill addresses for Codex in advance. Selection is deterministic, though execution can still fail for other reasons.</p>
+                    </article>
+                </div>
+
+                <div class="highlight-box">
+                    <p><strong>Simple mental model:</strong> @skills gives Codex file-import-style addressing. If you know the dependency, name it directly.</p>
+                </div>
+
+                <div class="simulator-container">
+                    <p class="simulator-kicker">Simulator 02</p>
+                    <h3 class="simulator-title">Compounding routing risk</h3>
+                    <p class="simulator-description">Adjust workflow length and per-step routing reliability.</p>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label>
+                            Workflow steps
+                            <span id="chain-steps-val">4</span>
+                        </label>
+                        <input type="range" id="chain-steps-slider" min="1" max="15" value="4">
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            Routing reliability per step
+                            <span id="chain-rel-val">90%</span>
+                        </label>
+                        <input type="range" id="chain-rel-slider" min="60" max="99" value="90">
+                    </div>
+                </div>
+
+                <div class="viz-container" id="chaining-viz"></div>
+                <div class="tooltip" id="chart-tooltip"></div>
+
+                <div class="stats-panel">
+                    <div class="stat-box">
+                        <div class="stat-title">Codex automatic routing</div>
+                        <div class="stat-value codex-val" id="codex-success-rate">65.6%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">Codex + @skills selection</div>
+                        <div class="stat-value skills-val">100%</div>
+                    </div>
+                    <p class="assumption">This isolates skill-selection risk. The 100% line means @skills selected the intended address for Codex—not that the overall task is guaranteed to succeed.</p>
+                </div>
+            </section>
+        </article>
+
+        <footer class="footer">Codex skills architecture comparison · Interactive model</footer>
+    </main>
+
+    <script>
+        // --- SIMULATOR 1 LOGIC ---
+        const bloatSlider = document.getElementById('bloat-skills-slider');
+        const bloatValDisp = document.getElementById('bloat-skills-val');
+        const phaseRadios = document.querySelectorAll('input[name="phase"]');
+
+        const codexMetaBlock = document.getElementById('codex-meta-block');
+        const codexExecBlock = document.getElementById('codex-exec-block');
+        const skillsExecBlock = document.getElementById('skills-exec-block');
+        const codexWasted = document.getElementById('codex-wasted-tokens');
+
+        const METADATA_TOKENS_PER_SKILL = 40;
+        const EXECUTION_PAYLOAD_TOKENS = 1500;
+        // Assume a theoretical max window of 8000 for visualization scaling
+        const MAX_VIZ_TOKENS = 8000;
+
+        function updateBloatSim() {
+            const numSkills = parseInt(bloatSlider.value);
+            const phase = document.querySelector('input[name="phase"]:checked').value;
+
+            bloatValDisp.textContent = numSkills;
+
+            const metadataTokens = numSkills * METADATA_TOKENS_PER_SKILL;
+            const metaHeightPct = Math.min(100, (metadataTokens / MAX_VIZ_TOKENS) * 100);
+
+            codexMetaBlock.style.height = `${metaHeightPct}%`;
+            codexWasted.textContent = metadataTokens.toLocaleString();
+
+            if (phase === 'execute') {
+                const execHeightPct = (EXECUTION_PAYLOAD_TOKENS / MAX_VIZ_TOKENS) * 100;
+                codexExecBlock.style.height = `${execHeightPct}%`;
+                skillsExecBlock.style.height = `${execHeightPct}%`;
+            } else {
+                codexExecBlock.style.height = '0%';
+                skillsExecBlock.style.height = '0%';
+            }
+        }
+
+        bloatSlider.addEventListener('input', updateBloatSim);
+        phaseRadios.forEach(r => r.addEventListener('change', updateBloatSim));
+        updateBloatSim();
+
+
+        // --- SIMULATOR 2 LOGIC (D3.js) ---
+        const chainStepsSlider = document.getElementById('chain-steps-slider');
+        const chainRelSlider = document.getElementById('chain-rel-slider');
+        const chainStepsVal = document.getElementById('chain-steps-val');
+        const chainRelVal = document.getElementById('chain-rel-val');
+        const codexSuccessRate = document.getElementById('codex-success-rate');
+
+        const margin = {top: 20, right: 30, bottom: 40, left: 60};
+        let width = document.getElementById('chaining-viz').clientWidth - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
+
+        const svg = d3.select("#chaining-viz")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleLinear().range([0, width]);
+        const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
+
+        const xAxis = svg.append("g").attr("transform", `translate(0,${height})`);
+        const yAxis = svg.append("g");
+
+        // Labels
+        svg.append("text")
+            .attr("text-anchor", "middle")
+            .attr("x", width/2)
+            .attr("y", height + 35)
+            .text("Workflow step");
+
+        svg.append("text")
+            .attr("text-anchor", "middle")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -45)
+            .attr("x", -height/2)
+            .text("Routing success (%)");
+
+        const codexLine = svg.append("path")
+            .attr("fill", "none")
+            .attr("stroke", "var(--codex-color)")
+            .attr("stroke-width", 3);
+
+        const skillsLine = svg.append("path")
+            .attr("fill", "none")
+            .attr("stroke", "var(--skills-color)")
+            .attr("stroke-width", 3)
+            .style("stroke-dasharray", ("5, 5")); // dashed to look deterministic/perfect
+
+        const tooltip = d3.select("#chart-tooltip");
+
+        function calculateData(steps, reliabilityPct) {
+            const r = reliabilityPct / 100;
+            const data = [];
+            for(let i = 1; i <= steps; i++) {
+                data.push({
+                    step: i,
+                    codexProb: Math.pow(r, i) * 100,
+                    skillsProb: 100
+                });
+            }
+            return data;
+        }
+
+        function updateChart() {
+            width = document.getElementById('chaining-viz').clientWidth - margin.left - margin.right;
+            d3.select("#chaining-viz svg").attr("width", width + margin.left + margin.right);
+            x.range([0, width]);
+
+            const steps = parseInt(chainStepsSlider.value);
+            const reliability = parseInt(chainRelSlider.value);
+
+            chainStepsVal.textContent = steps;
+            chainRelVal.textContent = `${reliability}%`;
+
+            const data = calculateData(steps, reliability);
+
+            // Update final stat
+            codexSuccessRate.textContent = `${data[data.length-1].codexProb.toFixed(1)}%`;
+
+            x.domain([1, Math.max(2, steps)]);
+
+            xAxis.transition().duration(200).call(d3.axisBottom(x).ticks(steps).tickFormat(d3.format("d")));
+            yAxis.call(d3.axisLeft(y));
+
+            const lineGenCodex = d3.line()
+                .x(d => x(d.step))
+                .y(d => y(d.codexProb))
+                .curve(d3.curveMonotoneX);
+
+            const lineGenSkills = d3.line()
+                .x(d => x(d.step))
+                .y(d => y(d.skillsProb));
+
+            codexLine.datum(data)
+                .transition().duration(200)
+                .attr("d", lineGenCodex);
+
+            skillsLine.datum(data)
+                .transition().duration(200)
+                .attr("d", lineGenSkills);
+
+            // Add dots
+            const dots = svg.selectAll(".dot").data(data);
+
+            dots.enter().append("circle")
+                .attr("class", "dot")
+                .attr("r", 5)
+                .attr("fill", "var(--codex-color)")
+                .merge(dots)
+                .transition().duration(200)
+                .attr("cx", d => x(d.step))
+                .attr("cy", d => y(d.codexProb));
+
+            dots.exit().remove();
+
+            // Hover interactions
+            svg.selectAll(".dot")
+                .on("mouseover", function(event, d) {
+                    d3.select(this).attr("r", 8);
+                    tooltip.transition().duration(100).style("opacity", .9);
+                    tooltip.html(`Step ${d.step}<br>Codex: ${d.codexProb.toFixed(1)}%<br>Codex + @skills: 100%`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(this).attr("r", 5);
+                    tooltip.transition().duration(200).style("opacity", 0);
+                });
+        }
+
+        chainStepsSlider.addEventListener('input', updateChart);
+        chainRelSlider.addEventListener('input', updateChart);
+
+        // Handle window resize
+        window.addEventListener('resize', updateChart);
+
+        updateChart();
+    </script>
+</body>
+</html>
