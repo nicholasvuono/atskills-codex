@@ -1,5 +1,8 @@
 # Release readiness
 
+Outside users should follow [`Integration.md`](Integration.md) to install the
+plugin from GitHub. The local workflow below is for repository maintainers.
+
 ## Install locally
 
 From the repository root:
