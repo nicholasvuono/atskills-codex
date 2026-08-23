@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Detailed comparison of SylphAI-Inc/atskills and the atskills-codex plugin.">
+  <meta name="author" content="Codex">
+  <meta name="date" content="2026-08-22T15:16:47-04:00">
+  <title>AtSkills and Codex Integration Assessment</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5f5f5;
+      --muted: #b0b0b0;
+      --paper: #121212;
+      --card: #1e1e1e;
+      --line: rgb(255 255 255 / 12%);
+      --green: #80cbc4;
+      --green-soft: rgb(128 203 196 / 15%);
+      --amber: #ffcc80;
+      --amber-soft: rgb(255 204 128 / 15%);
+      --navy: #5ca5ff;
+      --navy-soft: rgb(37 117 246 / 15%);
+      --shadow: 0 6px 18px rgb(0 0 0 / 38%);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 12% 0%, rgb(37 117 246 / 12%), transparent 32rem),
+        var(--paper);
+      color: var(--ink);
+      font: 16px/1.62 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: #5ca5ff; text-underline-offset: 0.16em; }
+    a:hover { text-decoration-thickness: 2px; }
+
+    code {
+      padding: 0.12em 0.35em;
+      border: 1px solid var(--line);
+      border-radius: 0.35em;
+      background: #242424;
+      font: 0.9em/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 32px auto 64px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(34px, 7vw, 78px);
+      border: 1px solid rgb(37 117 246 / 45%);
+      border-radius: 26px;
+      background: linear-gradient(135deg, #0d0d0d 0%, #172a4c 63%, #1b4a8a 100%);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      position: absolute;
+      right: -9rem;
+      bottom: -14rem;
+      width: 30rem;
+      height: 30rem;
+      border: 1px solid rgb(255 255 255 / 15%);
+      border-radius: 50%;
+      box-shadow: 0 0 0 4rem rgb(255 255 255 / 3%), 0 0 0 8rem rgb(255 255 255 / 2%);
+      content: "";
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: #5ca5ff;
+      font-size: 0.76rem;
+      font-weight: 750;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 { line-height: 1.16; }
+
+    h1 {
+      max-width: 780px;
+      margin: 0;
+      font-size: clamp(2.35rem, 6vw, 4.8rem);
+      letter-spacing: -0.055em;
+    }
+
+    .hero-summary {
+      position: relative;
+      z-index: 1;
+      max-width: 760px;
+      margin: 24px 0 0;
+      color: #c9d1d9;
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+    }
+
+    .meta-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 34px;
+    }
+
+    .meta {
+      min-height: 92px;
+      padding: 16px;
+      border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 14px;
+      background: rgb(255 255 255 / 7%);
+    }
+
+    .meta dt {
+      margin-bottom: 5px;
+      color: #5ca5ff;
+      font-size: 0.69rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .meta dd { margin: 0; font-size: 0.92rem; }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgb(30 30 30 / 92%);
+      backdrop-filter: blur(10px);
+    }
+
+    nav a {
+      padding: 7px 11px;
+      border-radius: 8px;
+      color: var(--ink);
+      font-size: 0.85rem;
+      font-weight: 680;
+      text-decoration: none;
+    }
+
+    nav a:hover { background: var(--navy-soft); }
+
+    main {
+      display: grid;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    section {
+      padding: clamp(24px, 5vw, 48px);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: clamp(1.55rem, 3vw, 2.2rem);
+      letter-spacing: -0.025em;
+    }
+
+    h3 { margin: 0 0 8px; font-size: 1.08rem; }
+    p { margin: 0 0 1em; }
+    p:last-child { margin-bottom: 0; }
+
+    .verdict {
+      display: grid;
+      grid-template-columns: 0.7fr 1.3fr;
+      gap: 28px;
+      align-items: center;
+      border-color: rgb(37 117 246 / 45%);
+      background: linear-gradient(135deg, #1e1e1e, #172a4c);
+    }
+
+    .verdict-mark {
+      padding-right: 28px;
+      border-right: 1px solid var(--line);
+    }
+
+    .verdict-mark strong {
+      display: block;
+      color: var(--green);
+      font-size: clamp(2.2rem, 7vw, 5.3rem);
+      letter-spacing: -0.07em;
+      line-height: 0.9;
+    }
+
+    .verdict-mark span {
+      display: block;
+      margin-top: 13px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 720;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .lead { font-size: 1.16rem; }
+
+    .callout {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--green);
+      border-radius: 0 10px 10px 0;
+      background: #242424;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 12px;
+      align-items: stretch;
+      margin-top: 24px;
+    }
+
+    .flow-card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #242424;
+    }
+
+    .flow-card b {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--green);
+      font-size: 0.76rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .arrow { align-self: center; color: var(--green); font-size: 1.7rem; }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.94rem;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #242424;
+      color: #5ca5ff;
+      font-size: 0.73rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:nth-child(even) { background: #242424; }
+
+    .status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.73rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .status.core { background: var(--navy-soft); color: var(--navy); }
+    .status.adapter { background: var(--green-soft); color: var(--green); }
+    .status.partial { background: var(--amber-soft); color: var(--amber); }
+
+    .grid-2, .grid-3 {
+      display: grid;
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .mini-card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #242424;
+    }
+
+    .mini-card p, .mini-card li { color: var(--muted); }
+    .mini-card p { margin: 0; }
+
+    ul, ol { margin: 0; padding-left: 1.25rem; }
+    li + li { margin-top: 0.48rem; }
+
+    .timeline {
+      margin: 24px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .timeline li {
+      display: grid;
+      grid-template-columns: 190px 18px 1fr;
+      gap: 13px;
+      margin: 0;
+    }
+
+    .timeline time {
+      padding-top: 1px;
+      color: var(--muted);
+      font: 0.78rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-align: right;
+    }
+
+    .dot {
+      position: relative;
+      width: 11px;
+      height: 11px;
+      margin-top: 6px;
+      border: 3px solid rgb(37 117 246 / 25%);
+      border-radius: 50%;
+      background: var(--green);
+      box-sizing: content-box;
+    }
+
+    .dot::after {
+      position: absolute;
+      top: 12px;
+      left: 3px;
+      width: 1px;
+      height: calc(100% + 62px);
+      background: var(--line);
+      content: "";
+    }
+
+    .timeline li:last-child .dot::after { display: none; }
+    .timeline-content { padding-bottom: 24px; }
+    .timeline-content p { margin: 3px 0 0; color: var(--muted); }
+
+    .recommendation {
+      border-color: rgb(255 204 128 / 65%);
+      background: linear-gradient(135deg, #1e1e1e, #332a1c);
+    }
+
+    .recommendation strong { color: var(--amber); }
+
+    .sources {
+      display: grid;
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sources li {
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #242424;
+    }
+
+    .sources small { display: block; margin-top: 3px; color: var(--muted); }
+
+    footer {
+      padding: 24px 4px 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
+    @media (max-width: 800px) {
+      .meta-grid, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .verdict, .grid-2 { grid-template-columns: 1fr; }
+      .verdict-mark { padding: 0 0 22px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .flow { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); justify-self: center; }
+      .timeline li { grid-template-columns: 1fr 18px 2fr; }
+    }
+
+    @media (max-width: 520px) {
+      .page { width: min(100% - 18px, 1120px); margin-top: 9px; }
+      .hero, section { border-radius: 15px; }
+      .meta-grid, .grid-3 { grid-template-columns: 1fr; }
+      .timeline li { grid-template-columns: 1fr; gap: 4px; }
+      .timeline time { text-align: left; }
+      .timeline .dot { display: none; }
+    }
+
+    @media print {
+      @page { size: A4; margin: 15mm; }
+      body { background: white; font-size: 10.5pt; }
+      .page { width: 100%; margin: 0; }
+      .hero, section { box-shadow: none; break-inside: avoid; }
+      nav { display: none; }
+      a { color: inherit; }
+      .flow-card, .mini-card, tr { break-inside: avoid; }
+      footer { padding-top: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="eyebrow">Technical assessment · Report v1.0</p>
+      <h1>AtSkills and Codex Integration</h1>
+      <p class="hero-summary">
+        A source-backed assessment of whether <strong>SylphAI-Inc/atskills</strong>
+        already provides the functionality in <strong>atskills-codex</strong>, and
+        whether the Codex plugin remains necessary.
+      </p>
+      <dl class="meta-grid">
+        <div class="meta">
+          <dt>Generated</dt>
+          <dd><time datetime="2026-08-22T15:16:47-04:00">Aug 22, 2026<br>3:16:47 PM EDT</time></dd>
+        </div>
+        <div class="meta">
+          <dt>Timezone</dt>
+          <dd>America/New_York<br>UTC−04:00</dd>
+        </div>
+        <div class="meta">
+          <dt>Local revision</dt>
+          <dd><code>c3e3e4e</code><br><span>main</span></dd>
+        </div>
+        <div class="meta">
+          <dt>Upstream revision</dt>
+          <dd><code>858802c</code><br><span>verified current</span></dd>
+        </div>
+      </dl>
+    </header>
+
+    <nav aria-label="Report sections">
+      <a href="#verdict">Verdict</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#comparison">Comparison</a>
+      <a href="#codex-value">Codex value</a>
+      <a href="#limitations">Limitations</a>
+      <a href="#recommendation">Recommendation</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#sources">Sources</a>
+    </nav>
+
+    <main>
+      <section class="verdict" id="verdict">
+        <div class="verdict-mark">
+          <strong>Yes,<br>but.</strong>
+          <span>Executive verdict</span>
+        </div>
+        <div>
+          <h2>Upstream is the engine; the plugin is the Codex adapter.</h2>
+          <p class="lead">
+            The upstream project already implements most of the difficult and reusable
+            functionality: reference parsing, GitHub resolution, caching, saving,
+            autotrigger rules, collection limits, and a command-line client.
+          </p>
+          <p>
+            The local plugin is therefore <strong>not a competing implementation</strong>.
+            Its durable value is Codex-specific packaging, hook integration, workspace
+            lifecycle handling, conversational management, and additional safety limits.
+          </p>
+          <div class="callout">
+            <strong>Bottom line:</strong> the plugin is optional for basic manual use,
+            but recommended when the desired experience is “paste an
+            <code>@skills:</code> reference into Codex and have it resolve automatically.”
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <p class="eyebrow">Responsibility boundary</p>
+        <h2>How the pieces fit together</h2>
+        <p>
+          The two repositories occupy adjacent layers. Eliminating the plugin would not
+          eliminate the protocol, but it would remove Codex’s automatic bridge to it.
+        </p>
+        <div class="flow" role="img" aria-label="Upstream protocol flows through the Codex adapter into the Codex task lifecycle">
+          <div class="flow-card">
+            <b>Layer 1 · Upstream</b>
+            <h3>Protocol engine</h3>
+            <p>Parses IDs, resolves local and GitHub skills, caches content, saves snapshots, and evaluates triggers.</p>
+          </div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="flow-card">
+            <b>Layer 2 · This repository</b>
+            <h3>Codex adapter</h3>
+            <p>Bundles the engine, exposes <code>$atskills</code>, applies safety guards, and translates Codex hook events.</p>
+          </div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="flow-card">
+            <b>Layer 3 · Codex</b>
+            <h3>Task lifecycle</h3>
+            <p>Receives resolved skill metadata on prompt submission and restores local workspace metadata on session start.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="comparison">
+        <p class="eyebrow">Capability matrix</p>
+        <h2>What exists where</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Capability</th>
+                <th scope="col">Upstream atskills</th>
+                <th scope="col">atskills-codex</th>
+                <th scope="col">Assessment</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>@skills:</code> path grammar and parsing</td>
+                <td>Implemented as protocol core.</td>
+                <td>Consumes the upstream implementation.</td>
+                <td><span class="status core">Upstream owns</span></td>
+              </tr>
+              <tr>
+                <td>Local and GitHub skill resolution</td>
+                <td>Implemented with Git-backed materialization and caching.</td>
+                <td>Calls the bundled upstream resolver through guarded wrappers.</td>
+                <td><span class="status core">Upstream owns</span></td>
+              </tr>
+              <tr>
+                <td>Save, install, uninstall, provenance</td>
+                <td>Protocol primitives and reference CLI exist upstream.</td>
+                <td>Adds Codex-oriented commands, confirmation rules, state indexing, and size limits.</td>
+                <td><span class="status adapter">Adapted</span></td>
+              </tr>
+              <tr>
+                <td>Automatic resolution in a Codex user prompt</td>
+                <td>Documented as a host responsibility.</td>
+                <td><code>UserPromptSubmit</code> finds and resolves references automatically.</td>
+                <td><span class="status adapter">Plugin value</span></td>
+              </tr>
+              <tr>
+                <td>Session restoration</td>
+                <td>Provides the index builder; the host must decide when to splice it into context.</td>
+                <td><code>SessionStart</code> restores bounded local metadata after startup, resume, clear, or compaction.</td>
+                <td><span class="status adapter">Plugin value</span></td>
+              </tr>
+              <tr>
+                <td>Codex installation and discovery</td>
+                <td>No Codex plugin manifest or marketplace entry.</td>
+                <td>Includes <code>.codex-plugin/plugin.json</code> and a repository marketplace.</td>
+                <td><span class="status adapter">Plugin value</span></td>
+              </tr>
+              <tr>
+                <td>Interactive <code>/skills</code> UI and native <code>@</code> completion</td>
+                <td>Reference UI and host integration patterns are provided.</td>
+                <td>Not added to Codex; management is conversational through <code>$atskills</code>.</td>
+                <td><span class="status partial">Not equivalent</span></td>
+              </tr>
+              <tr>
+                <td>Self-contained runtime</td>
+                <td>Source and built artifacts exist, but the named npm package is not currently published.</td>
+                <td>Pins and bundles the upstream runtime plus its <code>ignore</code> dependency.</td>
+                <td><span class="status adapter">Useful today</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="codex-value">
+        <p class="eyebrow">Why retain the adapter</p>
+        <h2>Material benefits inside Codex</h2>
+        <div class="grid-3">
+          <article class="mini-card">
+            <h3>Automatic prompt handling</h3>
+            <p>The user can write an <code>@skills:</code> reference directly instead of instructing Codex to invoke a separate CLI for each use.</p>
+          </article>
+          <article class="mini-card">
+            <h3>Lifecycle awareness</h3>
+            <p>The plugin participates in prompt submission and session restoration, including resume, clear, and context compaction events.</p>
+          </article>
+          <article class="mini-card">
+            <h3>Stable distribution</h3>
+            <p>A Codex manifest and marketplace make the integration installable as one unit rather than a per-workspace clone and manual setup.</p>
+          </article>
+          <article class="mini-card">
+            <h3>Safety boundary</h3>
+            <p>Resolved paths must stay within approved roots, symlinks are rejected, skill bodies are not injected by hooks, and skill files are never executed.</p>
+          </article>
+          <article class="mini-card">
+            <h3>Bounded context</h3>
+            <p>The adapter caps references, hook metadata, individual skill files, and saved snapshots to prevent accidental or hostile context expansion.</p>
+          </article>
+          <article class="mini-card">
+            <h3>Conversational management</h3>
+            <p>The bundled <code>$atskills</code> skill gives Codex explicit workflows for listing, saving, installing, inspecting, and removing skills.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="limitations">
+        <p class="eyebrow">Caveats and maintenance risk</p>
+        <h2>What the plugin does not fully solve</h2>
+        <div class="grid-2">
+          <article class="mini-card">
+            <h3>Remote-only autotriggers are partial</h3>
+            <p>
+              Session startup deliberately performs no network resolution. A remote-only
+              installed reference can be restored as metadata telling Codex to use
+              <code>@skills:&lt;id&gt;</code> when needed, but it is not eagerly materialized
+              into a readable local skill at session start.
+            </p>
+          </article>
+          <article class="mini-card">
+            <h3>No native autocomplete or management UI</h3>
+            <p>
+              The integration recognizes references after submission. It does not extend
+              Codex’s <code>@</code> dropdown or reproduce upstream’s interactive
+              <code>/skills</code> interface.
+            </p>
+          </article>
+          <article class="mini-card">
+            <h3>Some wrapper logic overlaps upstream</h3>
+            <p>
+              State and command wrappers intentionally add Codex policy, but they also
+              increase the surface that must remain aligned with upstream behavior.
+            </p>
+          </article>
+          <article class="mini-card">
+            <h3>Vendoring creates an update obligation</h3>
+            <p>
+              The snapshot is reproducible and integrity-checked, but upstream fixes only
+              arrive after the pinned revision, generated runtime, notices, and tests are
+              refreshed together.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="recommendation" id="recommendation">
+        <p class="eyebrow">Recommended decision</p>
+        <h2>Keep the plugin; make it thinner when upstream distribution improves.</h2>
+        <p class="lead">
+          <strong>Retain <code>atskills-codex</code></strong> if the product goal is a
+          low-friction, repeatable Codex experience. Removing it would trade a small
+          adapter maintenance cost for recurring manual instructions and setup in every
+          task or workspace.
+        </p>
+        <ol>
+          <li>Continue treating upstream as the source of truth for parsing, resolution, cache behavior, saves, and trigger semantics.</li>
+          <li>Keep Codex-specific code limited to packaging, hooks, safety policy, lifecycle translation, and management instructions.</li>
+          <li>When a stable upstream package is actually published, evaluate replacing the vendored bundle and any duplicate state behavior with direct imports.</li>
+          <li>Document remote-only autotrigger behavior clearly so “installed” is not mistaken for “network-resolved at every session start.”</li>
+        </ol>
+      </section>
+
+      <section id="evidence">
+        <p class="eyebrow">Timestamped verification log</p>
+        <h2>Checks performed</h2>
+        <ul class="timeline">
+          <li>
+            <time datetime="2026-08-18T07:49:07Z">2026-08-18<br>07:49:07 UTC</time>
+            <span class="dot" aria-hidden="true"></span>
+            <div class="timeline-content">
+              <h3>Upstream revision committed</h3>
+              <p>GitHub records <code>858802c58636e43d04edae51d4ac5d7c3819decf</code> as the current upstream commit used by this report.</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-08-22T13:36:27-04:00">2026-08-22<br>1:36:27 PM EDT</time>
+            <span class="dot" aria-hidden="true"></span>
+            <div class="timeline-content">
+              <h3>Local repository revision committed</h3>
+              <p>Local <code>main</code> revision: <code>c3e3e4eab3b70f8ee24d1c2f21be92fd3db23156</code>, subject “chore: cleanup.”</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-08-22T15:09:31-04:00">2026-08-22<br>3:09:31 PM EDT</time>
+            <span class="dot" aria-hidden="true"></span>
+            <div class="timeline-content">
+              <h3>Package registry checked</h3>
+              <p><code>npm view atskills</code> returned <code>E404 Not Found</code>. The upstream package manifest exists in source, but the public package name was not available at verification time.</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-08-22T15:12:54-04:00">2026-08-22<br>3:12:54 PM EDT</time>
+            <span class="dot" aria-hidden="true"></span>
+            <div class="timeline-content">
+              <h3>Upstream head and local pin matched</h3>
+              <p>GitHub <code>main</code>, <code>upstream.json</code>, the checked-in snapshot metadata, and the generated runtime all identified the same upstream revision.</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-08-22T15:12:54-04:00">2026-08-22<br>3:12:54 PM EDT</time>
+            <span class="dot" aria-hidden="true"></span>
+            <div class="timeline-content">
+              <h3>Report baseline captured</h3>
+              <p>Repository files, upstream documentation, the Codex plugin manifest, hook configuration, runtime guards, and official OpenAI plugin packaging guidance were compared.</p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section id="sources">
+        <p class="eyebrow">Source register</p>
+        <h2>Primary evidence</h2>
+        <ul class="sources">
+          <li>
+            <a href="https://github.com/SylphAI-Inc/atskills"><strong>SylphAI-Inc/atskills</strong></a>
+            <small>Protocol overview, reference implementation, CLI, lifecycle model, and status.</small>
+          </li>
+          <li>
+            <a href="https://github.com/SylphAI-Inc/atskills/blob/main/INTEGRATION.md"><strong>Upstream integration guide</strong></a>
+            <small>Defines the division between protocol-owned behavior and host-owned prompt, session, and UI integration.</small>
+          </li>
+          <li>
+            <a href="https://developers.openai.com/plugins/build/plugins"><strong>OpenAI: Package your plugin</strong></a>
+            <small>Official description of plugin identity, manifests, bundled skills, hooks, and marketplace distribution.</small>
+          </li>
+          <li>
+            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/plugins/atskills-codex/.codex-plugin/plugin.json"><strong>Local Codex plugin manifest</strong></a>
+            <small>Plugin identity, version, skills directory, capabilities, and display metadata.</small>
+          </li>
+          <li>
+            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/plugins/atskills-codex/hooks/hooks.json"><strong>Local hook configuration</strong></a>
+            <small>Declares <code>UserPromptSubmit</code> and <code>SessionStart</code> lifecycle integration.</small>
+          </li>
+          <li>
+            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/plugins/atskills-codex/hooks/atskills.mjs"><strong>Local hook adapter</strong></a>
+            <small>Reference detection, bounded metadata rendering, safety framing, and session restoration.</small>
+          </li>
+          <li>
+            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/plugins/atskills-codex/runtime/security.mjs"><strong>Local security policy</strong></a>
+            <small>Path confinement, symlink rejection, file validation, and skill-size enforcement.</small>
+          </li>
+          <li>
+            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/upstream.json"><strong>Local upstream pin</strong></a>
+            <small>Immutable repository and commit used to generate the bundled runtime.</small>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      Generated for the <code>atskills-codex</code> repository on
+      <time datetime="2026-08-22T15:16:47-04:00">August 22, 2026 at 3:16:47 PM EDT</time>.
+      Findings describe the verified repository state at that time and may change as upstream or Codex evolves.
+    </footer>
+  </div>
+</body>
+</html>
