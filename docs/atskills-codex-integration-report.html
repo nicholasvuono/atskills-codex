@@ -10,18 +10,18 @@
   <style>
     :root {
       color-scheme: dark;
-      --ink: #f5f5f5;
-      --muted: #b0b0b0;
-      --paper: #121212;
-      --card: #1e1e1e;
-      --line: rgb(255 255 255 / 12%);
-      --green: #80cbc4;
-      --green-soft: rgb(128 203 196 / 15%);
+      --ink: #f7f8fa;
+      --muted: #c0c5cc;
+      --paper: #181a1f;
+      --card: #242831;
+      --line: rgb(255 255 255 / 15%);
+      --green: #8ad9d1;
+      --green-soft: rgb(128 203 196 / 18%);
       --amber: #ffcc80;
       --amber-soft: rgb(255 204 128 / 15%);
-      --navy: #5ca5ff;
-      --navy-soft: rgb(37 117 246 / 15%);
-      --shadow: 0 6px 18px rgb(0 0 0 / 38%);
+      --navy: #69adff;
+      --navy-soft: rgb(37 117 246 / 20%);
+      --shadow: 0 6px 18px rgb(0 0 0 / 28%);
     }
 
     * { box-sizing: border-box; }
@@ -31,7 +31,7 @@
     body {
       margin: 0;
       background:
-        radial-gradient(circle at 12% 0%, rgb(37 117 246 / 12%), transparent 32rem),
+        radial-gradient(circle at 12% 0%, rgb(37 117 246 / 18%), transparent 32rem),
         var(--paper);
       color: var(--ink);
       font: 16px/1.62 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -44,45 +44,33 @@
       padding: 0.12em 0.35em;
       border: 1px solid var(--line);
       border-radius: 0.35em;
-      background: #242424;
+      background: #2d333d;
       font: 0.9em/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       overflow-wrap: anywhere;
     }
 
     .page {
-      width: min(1120px, calc(100% - 32px));
-      margin: 32px auto 64px;
+      width: min(100% - 40px, 1000px);
+      margin: 0 auto;
+      padding-bottom: 72px;
     }
 
     .hero {
       position: relative;
-      overflow: hidden;
-      padding: clamp(34px, 7vw, 78px);
-      border: 1px solid rgb(37 117 246 / 45%);
-      border-radius: 26px;
-      background: linear-gradient(135deg, #0d0d0d 0%, #172a4c 63%, #1b4a8a 100%);
-      color: white;
-      box-shadow: var(--shadow);
+      max-width: 840px;
+      padding: 88px 0 48px;
+      color: var(--ink);
     }
 
     .hero::after {
-      position: absolute;
-      right: -9rem;
-      bottom: -14rem;
-      width: 30rem;
-      height: 30rem;
-      border: 1px solid rgb(255 255 255 / 15%);
-      border-radius: 50%;
-      box-shadow: 0 0 0 4rem rgb(255 255 255 / 3%), 0 0 0 8rem rgb(255 255 255 / 2%);
-      content: "";
+      display: none;
     }
 
     .eyebrow {
-      margin: 0 0 10px;
-      color: #5ca5ff;
-      font-size: 0.76rem;
-      font-weight: 750;
-      letter-spacing: 0.14em;
+      margin: 0 0 16px;
+      color: #2575f6;
+      font: 800 .78rem/1.2 "SFMono-Regular", Consolas, monospace;
+      letter-spacing: .14em;
       text-transform: uppercase;
     }
 
@@ -90,102 +78,139 @@
 
     h1 {
       max-width: 780px;
-      margin: 0;
-      font-size: clamp(2.35rem, 6vw, 4.8rem);
-      letter-spacing: -0.055em;
+      margin: 0 0 22px;
+      background: linear-gradient(90deg, #2575f6, #5ca5ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-size: clamp(2.8rem, 7vw, 4.7rem);
+      font-weight: 700;
+      letter-spacing: -.045em;
+      line-height: .98;
     }
 
     .hero-summary {
-      position: relative;
-      z-index: 1;
-      max-width: 760px;
-      margin: 24px 0 0;
-      color: #c9d1d9;
-      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      max-width: 720px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1.08rem, 2vw, 1.28rem);
     }
 
     .meta-grid {
-      position: relative;
-      z-index: 1;
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 34px;
+      gap: 16px;
+      margin: 36px 0 0;
     }
 
     .meta {
-      min-height: 92px;
-      padding: 16px;
-      border: 1px solid rgb(255 255 255 / 18%);
-      border-radius: 14px;
-      background: rgb(255 255 255 / 7%);
+      min-height: 96px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: var(--shadow);
     }
 
     .meta dt {
-      margin-bottom: 5px;
+      margin-bottom: 6px;
       color: #5ca5ff;
-      font-size: 0.69rem;
-      font-weight: 750;
-      letter-spacing: 0.1em;
+      font: 800 .72rem/1.2 "SFMono-Regular", Consolas, monospace;
+      letter-spacing: .1em;
       text-transform: uppercase;
     }
 
-    .meta dd { margin: 0; font-size: 0.92rem; }
+    .meta dd { margin: 0; color: var(--muted); font-size: .92rem; }
 
     nav {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin: 18px 0 0;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgb(30 30 30 / 92%);
-      backdrop-filter: blur(10px);
+      margin: 0 0 64px;
+      padding: 0;
     }
 
     nav a {
       padding: 7px 11px;
-      border-radius: 8px;
-      color: var(--ink);
-      font-size: 0.85rem;
-      font-weight: 680;
+      border-radius: 4px;
+      color: var(--muted);
+      font-size: .84rem;
+      font-weight: 700;
       text-decoration: none;
     }
 
-    nav a:hover { background: var(--navy-soft); }
+    nav a:hover { background: var(--navy-soft); color: var(--ink); }
 
     main {
       display: grid;
-      gap: 18px;
-      margin-top: 18px;
+      gap: 72px;
+      margin-top: 0;
+      counter-reset: report-section;
     }
 
     section {
-      padding: clamp(24px, 5vw, 48px);
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      background: var(--card);
-      box-shadow: var(--shadow);
+      padding: 0;
     }
 
     h2 {
       margin: 0 0 18px;
-      font-size: clamp(1.55rem, 3vw, 2.2rem);
-      letter-spacing: -0.025em;
+      font-size: clamp(1.8rem, 4vw, 2.55rem);
+      letter-spacing: -.04em;
+      line-height: 1.1;
     }
 
-    h3 { margin: 0 0 8px; font-size: 1.08rem; }
-    p { margin: 0 0 1em; }
-    p:last-child { margin-bottom: 0; }
+    h3 { margin: 28px 0 10px; font-size: 1.15rem; letter-spacing: -.015em; }
+    p, li { color: var(--muted); }
+    p { margin: 0 0 16px; }
+    strong { color: var(--ink); }
+
+    main > section:not(.verdict) {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      column-gap: 18px;
+      counter-increment: report-section;
+    }
+
+    main > section:not(.verdict) > .eyebrow,
+    main > section:not(.verdict) > h2 {
+      grid-column: 2;
+    }
+
+    main > section:not(.verdict) > .eyebrow {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    main > section:not(.verdict) > .eyebrow::before {
+      position: absolute;
+      right: calc(100% + 18px);
+      top: -4px;
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 4px;
+      background: var(--navy-soft);
+      color: #2575f6;
+      content: counter(report-section, decimal-leading-zero);
+      font: 900 1rem/1 "SFMono-Regular", Consolas, monospace;
+      letter-spacing: 0;
+    }
+
+    main > section:not(.verdict) > *:not(.eyebrow):not(h2) {
+      grid-column: 1 / -1;
+    }
 
     .verdict {
       display: grid;
       grid-template-columns: 0.7fr 1.3fr;
       gap: 28px;
       align-items: center;
-      border-color: rgb(37 117 246 / 45%);
-      background: linear-gradient(135deg, #1e1e1e, #172a4c);
+      padding: 22px 24px;
+      border: 1px solid rgb(37 117 246 / 38%);
+      border-radius: 8px;
+      background: var(--navy-soft);
+      box-shadow: var(--shadow);
     }
 
     .verdict-mark {
@@ -216,9 +241,10 @@
     .callout {
       margin-top: 18px;
       padding: 16px 18px;
-      border-left: 4px solid var(--green);
-      border-radius: 0 10px 10px 0;
-      background: #242424;
+      border: 1px solid rgb(37 117 246 / 38%);
+      border-radius: 8px;
+      background: var(--navy-soft);
+      box-shadow: var(--shadow);
     }
 
     .flow {
@@ -230,10 +256,11 @@
     }
 
     .flow-card {
-      padding: 20px;
+      padding: 24px;
       border: 1px solid var(--line);
-      border-radius: 14px;
-      background: #242424;
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: var(--shadow);
     }
 
     .flow-card b {
@@ -250,7 +277,7 @@
     .table-wrap {
       overflow-x: auto;
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 8px;
     }
 
     table {
@@ -267,7 +294,7 @@
     }
 
     th {
-      background: #242424;
+      background: #2d333d;
       color: #5ca5ff;
       font-size: 0.73rem;
       letter-spacing: 0.07em;
@@ -275,7 +302,7 @@
     }
 
     tr:last-child td { border-bottom: 0; }
-    tbody tr:nth-child(even) { background: #242424; }
+    tbody tr:nth-child(even) { background: #2d333d; }
 
     .status {
       display: inline-block;
@@ -300,10 +327,11 @@
     .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
     .mini-card {
-      padding: 20px;
+      padding: 24px;
       border: 1px solid var(--line);
-      border-radius: 14px;
-      background: #242424;
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: var(--shadow);
     }
 
     .mini-card p, .mini-card li { color: var(--muted); }
@@ -312,97 +340,18 @@
     ul, ol { margin: 0; padding-left: 1.25rem; }
     li + li { margin-top: 0.48rem; }
 
-    .timeline {
-      margin: 24px 0 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .timeline li {
-      display: grid;
-      grid-template-columns: 190px 18px 1fr;
-      gap: 13px;
-      margin: 0;
-    }
-
-    .timeline time {
-      padding-top: 1px;
-      color: var(--muted);
-      font: 0.78rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      text-align: right;
-    }
-
-    .dot {
-      position: relative;
-      width: 11px;
-      height: 11px;
-      margin-top: 6px;
-      border: 3px solid rgb(37 117 246 / 25%);
-      border-radius: 50%;
-      background: var(--green);
-      box-sizing: content-box;
-    }
-
-    .dot::after {
-      position: absolute;
-      top: 12px;
-      left: 3px;
-      width: 1px;
-      height: calc(100% + 62px);
-      background: var(--line);
-      content: "";
-    }
-
-    .timeline li:last-child .dot::after { display: none; }
-    .timeline-content { padding-bottom: 24px; }
-    .timeline-content p { margin: 3px 0 0; color: var(--muted); }
-
-    .recommendation {
-      border-color: rgb(255 204 128 / 65%);
-      background: linear-gradient(135deg, #1e1e1e, #332a1c);
-    }
-
-    .recommendation strong { color: var(--amber); }
-
-    .sources {
-      display: grid;
-      gap: 10px;
-      padding: 0;
-      list-style: none;
-    }
-
-    .sources li {
-      padding: 14px 16px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #242424;
-    }
-
-    .sources small { display: block; margin-top: 3px; color: var(--muted); }
-
-    footer {
-      padding: 24px 4px 0;
-      color: var(--muted);
-      font-size: 0.8rem;
-      text-align: center;
-    }
-
     @media (max-width: 800px) {
       .meta-grid, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .verdict, .grid-2 { grid-template-columns: 1fr; }
       .verdict-mark { padding: 0 0 22px; border-right: 0; border-bottom: 1px solid var(--line); }
       .flow { grid-template-columns: 1fr; }
       .arrow { transform: rotate(90deg); justify-self: center; }
-      .timeline li { grid-template-columns: 1fr 18px 2fr; }
     }
 
     @media (max-width: 520px) {
       .page { width: min(100% - 18px, 1120px); margin-top: 9px; }
       .hero, section { border-radius: 15px; }
       .meta-grid, .grid-3 { grid-template-columns: 1fr; }
-      .timeline li { grid-template-columns: 1fr; gap: 4px; }
-      .timeline time { text-align: left; }
-      .timeline .dot { display: none; }
     }
 
     @media print {
@@ -413,7 +362,6 @@
       nav { display: none; }
       a { color: inherit; }
       .flow-card, .mini-card, tr { break-inside: avoid; }
-      footer { padding-top: 12px; }
     }
   </style>
 </head>
@@ -453,9 +401,6 @@
       <a href="#comparison">Comparison</a>
       <a href="#codex-value">Codex value</a>
       <a href="#limitations">Limitations</a>
-      <a href="#recommendation">Recommendation</a>
-      <a href="#evidence">Evidence</a>
-      <a href="#sources">Sources</a>
     </nav>
 
     <main>
@@ -649,115 +594,7 @@
         </div>
       </section>
 
-      <section class="recommendation" id="recommendation">
-        <p class="eyebrow">Recommended decision</p>
-        <h2>Keep the plugin; make it thinner when upstream distribution improves.</h2>
-        <p class="lead">
-          <strong>Retain <code>atskills-codex</code></strong> if the product goal is a
-          low-friction, repeatable Codex experience. Removing it would trade a small
-          adapter maintenance cost for recurring manual instructions and setup in every
-          task or workspace.
-        </p>
-        <ol>
-          <li>Continue treating upstream as the source of truth for parsing, resolution, cache behavior, saves, and trigger semantics.</li>
-          <li>Keep Codex-specific code limited to packaging, hooks, safety policy, lifecycle translation, and management instructions.</li>
-          <li>When a stable upstream package is actually published, evaluate replacing the vendored bundle and any duplicate state behavior with direct imports.</li>
-          <li>Document remote-only autotrigger behavior clearly so “installed” is not mistaken for “network-resolved at every session start.”</li>
-        </ol>
-      </section>
-
-      <section id="evidence">
-        <p class="eyebrow">Timestamped verification log</p>
-        <h2>Checks performed</h2>
-        <ul class="timeline">
-          <li>
-            <time datetime="2026-08-18T07:49:07Z">2026-08-18<br>07:49:07 UTC</time>
-            <span class="dot" aria-hidden="true"></span>
-            <div class="timeline-content">
-              <h3>Upstream revision committed</h3>
-              <p>GitHub records <code>858802c58636e43d04edae51d4ac5d7c3819decf</code> as the current upstream commit used by this report.</p>
-            </div>
-          </li>
-          <li>
-            <time datetime="2026-08-22T13:36:27-04:00">2026-08-22<br>1:36:27 PM EDT</time>
-            <span class="dot" aria-hidden="true"></span>
-            <div class="timeline-content">
-              <h3>Local repository revision committed</h3>
-              <p>Local <code>main</code> revision: <code>c3e3e4eab3b70f8ee24d1c2f21be92fd3db23156</code>, subject “chore: cleanup.”</p>
-            </div>
-          </li>
-          <li>
-            <time datetime="2026-08-22T15:09:31-04:00">2026-08-22<br>3:09:31 PM EDT</time>
-            <span class="dot" aria-hidden="true"></span>
-            <div class="timeline-content">
-              <h3>Package registry checked</h3>
-              <p><code>npm view atskills</code> returned <code>E404 Not Found</code>. The upstream package manifest exists in source, but the public package name was not available at verification time.</p>
-            </div>
-          </li>
-          <li>
-            <time datetime="2026-08-22T15:12:54-04:00">2026-08-22<br>3:12:54 PM EDT</time>
-            <span class="dot" aria-hidden="true"></span>
-            <div class="timeline-content">
-              <h3>Upstream head and local pin matched</h3>
-              <p>GitHub <code>main</code>, <code>upstream.json</code>, the checked-in snapshot metadata, and the generated runtime all identified the same upstream revision.</p>
-            </div>
-          </li>
-          <li>
-            <time datetime="2026-08-22T15:12:54-04:00">2026-08-22<br>3:12:54 PM EDT</time>
-            <span class="dot" aria-hidden="true"></span>
-            <div class="timeline-content">
-              <h3>Report baseline captured</h3>
-              <p>Repository files, upstream documentation, the Codex plugin manifest, hook configuration, runtime guards, and official OpenAI plugin packaging guidance were compared.</p>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <section id="sources">
-        <p class="eyebrow">Source register</p>
-        <h2>Primary evidence</h2>
-        <ul class="sources">
-          <li>
-            <a href="https://github.com/SylphAI-Inc/atskills"><strong>SylphAI-Inc/atskills</strong></a>
-            <small>Protocol overview, reference implementation, CLI, lifecycle model, and status.</small>
-          </li>
-          <li>
-            <a href="https://github.com/SylphAI-Inc/atskills/blob/main/INTEGRATION.md"><strong>Upstream integration guide</strong></a>
-            <small>Defines the division between protocol-owned behavior and host-owned prompt, session, and UI integration.</small>
-          </li>
-          <li>
-            <a href="https://developers.openai.com/plugins/build/plugins"><strong>OpenAI: Package your plugin</strong></a>
-            <small>Official description of plugin identity, manifests, bundled skills, hooks, and marketplace distribution.</small>
-          </li>
-          <li>
-            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/plugins/atskills-codex/.codex-plugin/plugin.json"><strong>Local Codex plugin manifest</strong></a>
-            <small>Plugin identity, version, skills directory, capabilities, and display metadata.</small>
-          </li>
-          <li>
-            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/plugins/atskills-codex/hooks/hooks.json"><strong>Local hook configuration</strong></a>
-            <small>Declares <code>UserPromptSubmit</code> and <code>SessionStart</code> lifecycle integration.</small>
-          </li>
-          <li>
-            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/plugins/atskills-codex/hooks/atskills.mjs"><strong>Local hook adapter</strong></a>
-            <small>Reference detection, bounded metadata rendering, safety framing, and session restoration.</small>
-          </li>
-          <li>
-            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/plugins/atskills-codex/runtime/security.mjs"><strong>Local security policy</strong></a>
-            <small>Path confinement, symlink rejection, file validation, and skill-size enforcement.</small>
-          </li>
-          <li>
-            <a href="https://github.com/nicholasvuono/atskills-codex/blob/main/upstream.json"><strong>Local upstream pin</strong></a>
-            <small>Immutable repository and commit used to generate the bundled runtime.</small>
-          </li>
-        </ul>
-      </section>
     </main>
-
-    <footer>
-      Generated for the <code>atskills-codex</code> repository on
-      <time datetime="2026-08-22T15:16:47-04:00">August 22, 2026 at 3:16:47 PM EDT</time>.
-      Findings describe the verified repository state at that time and may change as upstream or Codex evolves.
-    </footer>
   </div>
 </body>
 </html>
