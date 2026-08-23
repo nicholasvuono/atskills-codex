@@ -99,3 +99,10 @@ a saved copy requires explicit confirmation.
 - [Install, update, remove, and troubleshoot](Integration.md)
 - [CLI command reference](plugins/atskills-codex/skills/atskills/references/cli.md)
 - [Release and maintenance notes](RELEASE.md)
+
+## Special thanks
+
+Special thanks to [AtSkills](https://atskills.one) and its
+[open-source repository](https://github.com/SylphAI-Inc/atskills) for the
+original `@skills:` protocol and reference implementation that this Codex
+integration builds on.
