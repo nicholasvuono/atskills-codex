@@ -18,7 +18,8 @@ import {
   writeFileAtomic,
   SOURCE_FILE,
   DEFAULT_CACHE_DIR,
-} from "./atskills.mjs";
+} from "./atskills.js";
+import type { ResidentSkill, TriggerEntry } from "./atskills.js";
 import {
   existsSync,
   lstatSync,
@@ -36,17 +37,52 @@ import {
   isSafeWorkspacePath,
   MAX_SKILL_BYTES,
   resolveSafely,
-} from "./security.mjs";
+} from "./security.js";
+import type {
+  ResolverOptions,
+  ResultCode,
+  RuntimeResult,
+  WorkspaceIndex,
+  WorkspaceOptions,
+  WorkspacePaths,
+  WorkspaceProvenance,
+  WorkspaceSkill,
+  WorkspaceState,
+} from "./types.js";
 
 export const MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024;
 export const MAX_SNAPSHOT_FILES = 64;
 export const WORKSPACE_INDEX_VERSION = 1;
 
-function errorMessage(error) {
+interface SnapshotStats {
+  bytes: number;
+  files: number;
+}
+
+interface SnapshotSummary extends Partial<SnapshotStats> {
+  error?: string;
+}
+
+interface WarningResult {
+  warning: string;
+}
+
+type WorkspaceMutationResult = WorkspaceIndex | WarningResult;
+
+interface FoundSkill {
+  rel: string;
+  dir: string;
+}
+
+function warningOf(result: WorkspaceMutationResult | null): string | undefined {
+  return result && "warning" in result ? result.warning : undefined;
+}
+
+function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function resultCode(message, fallback = "NETWORK") {
+function resultCode(message: unknown, fallback: ResultCode = "NETWORK"): ResultCode {
   const text = String(message);
   if (/invalid|empty skill path|path escapes/i.test(text)) return "INVALID_REF";
   if (/too large|over the \d+|maximum is|exceed/i.test(text)) return "TOO_LARGE";
@@ -55,7 +91,11 @@ function resultCode(message, fallback = "NETWORK") {
   return fallback;
 }
 
-function failure(code, message, extra = {}) {
+function failure(
+  code: ResultCode,
+  message: unknown,
+  extra: Partial<RuntimeResult> = {},
+): RuntimeResult {
   return {
     ok: false,
     success: false,
@@ -65,19 +105,24 @@ function failure(code, message, extra = {}) {
   };
 }
 
-function success(extra = {}) {
+function success(extra: Partial<RuntimeResult> = {}): RuntimeResult {
   return { ok: true, success: true, ...extra };
 }
 
-function workingDirectory(options = {}) {
+function workingDirectory(options: Partial<WorkspaceOptions> = {}): string {
   return options.workingDir ?? process.cwd();
 }
 
-function resolveSkill(id, save, options, install = false) {
+function resolveSkill(
+  id: string,
+  save: boolean,
+  options: ResolverOptions,
+  install = false,
+): Promise<RuntimeResult> {
   return resolveSafely(upstreamResolveSkill, id, save, options, install);
 }
 
-function stateId(raw) {
+function stateId(raw: string): string | RuntimeResult {
   let id;
   try {
     id = normalizeId(raw);
@@ -95,7 +140,7 @@ function stateId(raw) {
   return id;
 }
 
-export function workspacePaths(workingDir = process.cwd()) {
+export function workspacePaths(workingDir = process.cwd()): WorkspacePaths {
   const root = skillsRoot(workingDir);
   const codex = join(root, ".codex");
   return {
@@ -106,10 +151,10 @@ export function workspacePaths(workingDir = process.cwd()) {
   };
 }
 
-function snapshotStats(dir) {
-  const totals = { bytes: 0, files: 0 };
+function snapshotStats(dir: string): SnapshotStats {
+  const totals: SnapshotStats = { bytes: 0, files: 0 };
 
-  const visit = (current) => {
+  const visit = (current: string): void => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       if (entry.name === ".git") continue;
       const file = join(current, entry.name);
@@ -131,7 +176,7 @@ function snapshotStats(dir) {
   return totals;
 }
 
-function walkWorkspaceSkills(root, rel = "") {
+function walkWorkspaceSkills(root: string, rel = ""): FoundSkill[] {
   const dir = rel ? join(root, rel) : root;
   let current;
   try {
@@ -160,24 +205,44 @@ function walkWorkspaceSkills(root, rel = "") {
     .flatMap((entry) => walkWorkspaceSkills(root, rel ? `${rel}/${entry.name}` : entry.name));
 }
 
-function safeIndex(index, root) {
-  if (!index || typeof index !== "object") return index;
-  const skills = Array.isArray(index.skills)
-    ? index.skills.filter((skill) => !skill?.path || isSafeWorkspacePath(root, skill.path, true))
+function safeIndex(index: unknown, root: string): WorkspaceIndex | null {
+  if (!index || typeof index !== "object") return null;
+  const value = index as Record<string, unknown>;
+  const skills = Array.isArray(value.skills)
+    ? value.skills.filter((skill): skill is WorkspaceSkill => {
+        if (!skill || typeof skill !== "object") return false;
+        const record = skill as Record<string, unknown>;
+        return typeof record.id === "string" && typeof record.path === "string" && isSafeWorkspacePath(root, record.path, true);
+      })
     : [];
-  const provenance = Array.isArray(index.provenance)
-    ? index.provenance.filter((record) => !record?.path || isSafeWorkspacePath(root, record.path, true))
+  const provenance = Array.isArray(value.provenance)
+    ? value.provenance.filter((record): record is WorkspaceProvenance => {
+        if (!record || typeof record !== "object") return false;
+        const value = record as Record<string, unknown>;
+        return typeof value.id === "string" && (!value.path || (typeof value.path === "string" && isSafeWorkspacePath(root, value.path, true)));
+      })
     : [];
-  const resident = Array.isArray(index.resident)
-    ? index.resident
-        .filter((entry) => !entry?.file || isSafeWorkspacePath(root, entry.file, true))
-        .map((entry) => ({ ...entry, ...(entry?.id ? { id: canonicalStateId(entry.id) } : {}) }))
+  const resident = Array.isArray(value.resident)
+    ? value.resident
+        .filter((entry): entry is ResidentSkill => {
+          if (!entry || typeof entry !== "object") return false;
+          const value = entry as Record<string, unknown>;
+          return !value.file || (typeof value.file === "string" && isSafeWorkspacePath(root, value.file, true));
+        })
+        .map((entry) => ({ ...entry, ...(entry.id ? { id: canonicalStateId(entry.id) } : {}) }))
     : [];
-  return { ...index, skills, provenance, resident };
+  return {
+    version: typeof value.version === "number" ? value.version : WORKSPACE_INDEX_VERSION,
+    generatedAt: typeof value.generatedAt === "string" ? value.generatedAt : "",
+    skills,
+    provenance,
+    triggers: Array.isArray(value.triggers) ? value.triggers as TriggerEntry[] : [],
+    resident,
+  };
 }
 
-function canonicalStateId(raw) {
-  if (typeof raw !== "string") return raw;
+function canonicalStateId(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
   try {
     return normalizeId(raw);
   } catch {
@@ -185,7 +250,7 @@ function canonicalStateId(raw) {
   }
 }
 
-function snapshotLimitError(stats) {
+function snapshotLimitError(stats: SnapshotStats): string | null {
   if (stats.bytes > MAX_SNAPSHOT_BYTES) {
     return `saved snapshot is ${stats.bytes} bytes; maximum is ${MAX_SNAPSHOT_BYTES} bytes`;
   }
@@ -195,19 +260,32 @@ function snapshotLimitError(stats) {
   return null;
 }
 
-function cacheRevision(cacheDir, id) {
+function cacheRevision(cacheDir: string, id: string): string {
   const hash = createHash("sha256").update(id).digest("hex").slice(0, 32);
   try {
-    const metadata = JSON.parse(
+    const metadata: unknown = JSON.parse(
       readFileSync(join(cacheDir, ".meta", `${hash}.json`), "utf8"),
     );
-    return typeof metadata.revision === "string" ? metadata.revision : "unknown";
+    if (
+      metadata &&
+      typeof metadata === "object" &&
+      "revision" in metadata &&
+      typeof metadata.revision === "string"
+    ) {
+      return metadata.revision;
+    }
+    return "unknown";
   } catch {
     return "unknown";
   }
 }
 
-function provenanceFor(id, dir, options, resolved) {
+function provenanceFor(
+  id: string,
+  dir: string,
+  options: ResolverOptions,
+  resolved: RuntimeResult,
+): WorkspaceProvenance {
   const stamp = nearestSource(dir, skillsRoot(workingDirectory(options)));
   if (stamp) {
     return {
@@ -233,7 +311,10 @@ function provenanceFor(id, dir, options, resolved) {
   };
 }
 
-function sourceForSave(id, options) {
+function sourceForSave(
+  id: string,
+  options: ResolverOptions,
+): Promise<{ resolved: RuntimeResult; temp: string | null }> {
   if (!isCloud(id)) return resolveSkill(id, false, options).then((resolved) => ({ resolved, temp: null }));
 
   // Cloud resolution is local-first. Use an empty workspace for the
@@ -248,27 +329,27 @@ function sourceForSave(id, options) {
     });
 }
 
-function targetPath(id, workingDir) {
+function targetPath(id: string, workingDir: string): string {
   return safeJoin(skillsRoot(workingDir), diskPath(id));
 }
 
-function retiredPath(dest) {
+function retiredPath(dest: string): string {
   return `${dest}.codex-old-${process.pid.toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
 }
 
-function restoreRetired(dest, retired) {
+function restoreRetired(dest: string, retired: string | null): void {
   if (!retired || !existsSync(retired)) return;
   if (existsSync(dest)) rmSync(dest, { recursive: true, force: true });
   renameSync(retired, dest);
 }
 
-function triggerCandidates(id) {
+function triggerCandidates(id: string): Set<string> {
   return new Set([`@${id}`, diskPath(id), id]);
 }
 
-function rebuildAfterMutation(workingDir) {
+function rebuildAfterMutation(workingDir: string): WorkspaceMutationResult {
   try {
     return rebuildWorkspaceIndex(workingDir);
   } catch (error) {
@@ -277,13 +358,16 @@ function rebuildAfterMutation(workingDir) {
 }
 
 /** Save a detached snapshot with PR-4 size, conflict, and provenance rules. */
-export async function saveSkill(rawId, options = {}) {
+export async function saveSkill(
+  rawId: string,
+  options: Partial<WorkspaceOptions> = {},
+): Promise<RuntimeResult> {
   const id = stateId(rawId);
   if (typeof id !== "string") return id;
 
   const workingDir = workingDirectory(options);
-  const resolverOptions = { ...options, workingDir };
-  let resolved;
+  const resolverOptions: ResolverOptions = { ...options, workingDir };
+  let resolved: RuntimeResult;
   let preflightTemp = null;
   try {
     const preflight = await sourceForSave(id, resolverOptions);
@@ -305,7 +389,7 @@ export async function saveSkill(rawId, options = {}) {
     if (preflightTemp) rmSync(preflightTemp, { recursive: true, force: true });
     return failure("NOT_FOUND", `Resolved '${id}' has no materialized snapshot`);
   }
-  let stats;
+  let stats: SnapshotStats;
   try {
     stats = snapshotStats(sourceDir);
   } catch (error) {
@@ -320,7 +404,7 @@ export async function saveSkill(rawId, options = {}) {
   if (!isSafeWorkspacePath(skillsRoot(workingDir), dest)) {
     return failure("INVALID_REF", `refusing unsafe saved-skill path for '${id}'`);
   }
-  let retired = null;
+  let retired: string | null = null;
   if (options.force && existsSync(dest)) {
     retired = retiredPath(dest);
     try {
@@ -330,7 +414,7 @@ export async function saveSkill(rawId, options = {}) {
     }
   }
 
-  let saved;
+  let saved: RuntimeResult;
   try {
     saved = await upstreamSaveSkillToProject(id, resolverOptions);
   } catch (error) {
@@ -356,7 +440,8 @@ export async function saveSkill(rawId, options = {}) {
   }
 
   const indexResult = rebuildAfterMutation(workingDir);
-  if (indexResult?.warning) warning = warning ? `${warning}; ${indexResult.warning}` : indexResult.warning;
+  const indexWarning = warningOf(indexResult);
+  if (indexWarning) warning = warning ? `${warning}; ${indexWarning}` : indexWarning;
   const provenance = provenanceFor(id, dest, resolverOptions, resolved);
   return success({
     ...saved,
@@ -371,11 +456,14 @@ export async function saveSkill(rawId, options = {}) {
 }
 
 /** Resolve and add the canonical autotrigger line. Safe to call repeatedly. */
-export async function installSkill(rawId, options = {}) {
+export async function installSkill(
+  rawId: string,
+  options: Partial<WorkspaceOptions> = {},
+): Promise<RuntimeResult> {
   const id = stateId(rawId);
   if (typeof id !== "string") return id;
   const workingDir = workingDirectory(options);
-  let resolved;
+  let resolved: RuntimeResult;
   try {
     resolved = await resolveSkill(id, false, { ...options, workingDir });
   } catch (error) {
@@ -396,18 +484,22 @@ export async function installSkill(rawId, options = {}) {
     return failure("CONFLICT", `could not update ${workspacePaths(workingDir).autotrigger}: ${errorMessage(error)}`);
   }
   const indexResult = rebuildAfterMutation(workingDir);
+  const indexWarning = warningOf(indexResult);
   return success({
     ...resolved,
     id,
     installed: true,
     added,
     saved: Boolean(readProvenance(id, workingDir)),
-    ...(indexResult?.warning ? { warning: indexResult.warning } : {}),
+    ...(indexWarning ? { warning: indexWarning } : {}),
   });
 }
 
 /** Remove trigger lines only; saved snapshots stay untouched. */
-export function uninstallSkill(rawId, options = {}) {
+export function uninstallSkill(
+  rawId: string,
+  options: Partial<WorkspaceOptions> = {},
+): RuntimeResult {
   const id = stateId(rawId);
   if (typeof id !== "string") return id;
   const workingDir = workingDirectory(options);
@@ -420,16 +512,20 @@ export function uninstallSkill(rawId, options = {}) {
     }
   }
   const indexResult = removed ? rebuildAfterMutation(workingDir) : null;
+  const indexWarning = warningOf(indexResult);
   return success({
     id,
     installed: false,
     removed,
-    ...(indexResult?.warning ? { warning: indexResult.warning } : {}),
+    ...(indexWarning ? { warning: indexWarning } : {}),
   });
 }
 
 /** Delete one saved snapshot, never the workspace state root itself. */
-export function removeSkill(rawId, options = {}) {
+export function removeSkill(
+  rawId: string,
+  options: Partial<WorkspaceOptions> = {},
+): RuntimeResult {
   const id = stateId(rawId);
   if (typeof id !== "string") return id;
   if (options.confirm !== true && options.yes !== true) {
@@ -465,7 +561,7 @@ export function removeSkill(rawId, options = {}) {
 
   const uninstall = uninstallSkill(id, { workingDir });
   const indexResult = rebuildAfterMutation(workingDir);
-  const warning = [uninstall.warning, indexResult?.warning].filter(Boolean).join("; ");
+  const warning = [uninstall.warning, warningOf(indexResult)].filter(Boolean).join("; ");
   return success({
     id,
     removed: true,
@@ -474,7 +570,7 @@ export function removeSkill(rawId, options = {}) {
   });
 }
 
-function skillMetadata(root, skill) {
+function skillMetadata(root: string, skill: FoundSkill): WorkspaceSkill {
   const dir = skill.dir;
   const id = normalizeId(skill.rel);
   if (!isSafeWorkspacePath(root, dir, true)) {
@@ -488,7 +584,7 @@ function skillMetadata(root, skill) {
   }
   const stamp = nearestSource(dir, root);
   const meta = frontmatter(readFileSync(skillFile, "utf8"));
-  let stats;
+  let stats: SnapshotSummary;
   try {
     stats = snapshotStats(dir);
   } catch (error) {
@@ -513,10 +609,10 @@ function skillMetadata(root, skill) {
 }
 
 /** Rebuild the local-only derived index. This never resolves cloud entries. */
-export function rebuildWorkspaceIndex(workingDir = process.cwd()) {
+export function rebuildWorkspaceIndex(workingDir = process.cwd()): WorkspaceIndex {
   const paths = workspacePaths(workingDir);
   mkdirSync(paths.codex, { recursive: true });
-  const skills = [];
+  const skills: WorkspaceSkill[] = [];
   for (const skill of walkWorkspaceSkills(paths.root)) {
     try {
       skills.push(skillMetadata(paths.root, skill));
@@ -529,8 +625,8 @@ export function rebuildWorkspaceIndex(workingDir = process.cwd()) {
     generatedAt: new Date().toISOString(),
     skills,
     provenance: skills
-      .filter((skill) => skill.saved)
-      .map((skill) => ({ id: skill.id, ...skill.provenance, path: skill.path })),
+      .filter((skill): skill is WorkspaceSkill & { provenance: WorkspaceProvenance } => Boolean(skill.saved && skill.provenance))
+      .map((skill) => ({ ...skill.provenance, id: skill.id, path: skill.path })),
     triggers: parseTriggers(paths.root),
     resident: expandLocalTriggers(paths.root)
       .filter((entry) => !entry.file || isSafeWorkspacePath(paths.root, entry.file, true))
@@ -540,16 +636,17 @@ export function rebuildWorkspaceIndex(workingDir = process.cwd()) {
   return index;
 }
 
-export function readWorkspaceIndex(workingDir = process.cwd()) {
+export function readWorkspaceIndex(workingDir = process.cwd()): WorkspaceIndex | null {
   try {
-    return JSON.parse(readFileSync(workspacePaths(workingDir).index, "utf8"));
+    const parsed: unknown = JSON.parse(readFileSync(workspacePaths(workingDir).index, "utf8"));
+    return parsed && typeof parsed === "object" ? parsed as WorkspaceIndex : null;
   } catch {
     return null;
   }
 }
 
 /** Read saved metadata without invoking the resolver or the network. */
-export function readWorkspaceState(workingDir = process.cwd()) {
+export function readWorkspaceState(workingDir = process.cwd()): WorkspaceState {
   const paths = workspacePaths(workingDir);
   const index = safeIndex(readWorkspaceIndex(workingDir), paths.root);
   return {
@@ -564,7 +661,10 @@ export function readWorkspaceState(workingDir = process.cwd()) {
   };
 }
 
-export function readProvenance(rawId, workingDir = process.cwd()) {
+export function readProvenance(
+  rawId: string,
+  workingDir = process.cwd(),
+): WorkspaceProvenance | null {
   const id = stateId(rawId);
   if (typeof id !== "string") return null;
   const root = skillsRoot(workingDir);

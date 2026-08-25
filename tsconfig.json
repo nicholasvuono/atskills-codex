@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmitOnError": true,
+    "verbatimModuleSyntax": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "plugins/atskills-codex/**/*.ts",
+    "test/**/*.test.ts"
+  ],
+  "exclude": ["vendor/**", ".atskills/**", "node_modules/**"]
+}

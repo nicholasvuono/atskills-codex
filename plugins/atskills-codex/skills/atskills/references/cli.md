@@ -1,6 +1,6 @@
 # AtSkills CLI
 
-The script is `scripts/atskills.mjs` in this skill directory. It uses the
+The script is `scripts/atskills.js` in this skill directory. It uses the
 plugin's shared resolver and workspace state; it does not run files stored in
 skills.
 

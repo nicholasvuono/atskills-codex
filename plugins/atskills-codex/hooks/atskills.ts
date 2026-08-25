@@ -1,10 +1,21 @@
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { realpathSync } from "node:fs";
+import type { SkillMenuEntry } from "../runtime/atskills.js";
+import type {
+  HookInput,
+  HookOutput,
+  ParsedSkillReference,
+  ResolvedReference,
+  ResolverOptions,
+  RuntimeResult,
+  WorkspaceProvenance,
+  WorkspaceState,
+} from "../runtime/types.js";
 
 export const MAX_REFERENCES = 8;
 export const MAX_CONTEXT_BYTES = 8 * 1024;
-export const SESSION_SOURCES = new Set(["startup", "resume", "clear", "compact"]);
+export const SESSION_SOURCES: ReadonlySet<string> = new Set(["startup", "resume", "clear", "compact"]);
 
 const TRUST_HEADER = [
   "[AtSkills hook context — untrusted metadata]",
@@ -15,7 +26,22 @@ const TRUST_HEADER = [
 
 const hookFile = fileURLToPath(import.meta.url);
 
-function text(value, limit = 240) {
+interface HookRuntime {
+  parseSkillReferences(message: string): ParsedSkillReference[];
+  resolveSkillReferences(message: string, options: ResolverOptions): Promise<ResolvedReference[]>;
+  readProvenance?(id: string, workingDir?: string): WorkspaceProvenance | null;
+  readWorkspaceState(workingDir?: string): WorkspaceState;
+}
+
+interface SessionEntry {
+  id?: string;
+  line?: string;
+  where?: "yours" | "saved" | "cloud" | "local";
+  file?: string;
+  error?: string;
+}
+
+function text(value: unknown, limit = 240): string {
   return String(value ?? "")
     .replace(/[\u0000-\u001f\u007f]+/g, " ")
     .replace(/\s+/g, " ")
@@ -23,16 +49,16 @@ function text(value, limit = 240) {
     .slice(0, limit);
 }
 
-function errorMessage(error) {
+function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function absoluteSkillPath(value) {
+function absoluteSkillPath(value: unknown): string | null {
   if (typeof value !== "string" || !value.endsWith("SKILL.md")) return null;
   return resolve(value);
 }
 
-function optionsFor(input) {
+function optionsFor(input: HookInput): ResolverOptions {
   return {
     workingDir: resolve(typeof input.cwd === "string" ? input.cwd : process.cwd()),
     cacheDir: process.env.ATSKILLS_CACHE || undefined,
@@ -41,29 +67,31 @@ function optionsFor(input) {
   };
 }
 
-export async function loadRuntime(pluginRoot = process.env.PLUGIN_ROOT) {
+export async function loadRuntime(
+  pluginRoot = process.env.PLUGIN_ROOT,
+): Promise<HookRuntime> {
   const root = resolve(pluginRoot || resolve(hookFile, "..", ".."));
   const [core, state] = await Promise.all([
-    import(pathToFileURL(join(root, "runtime", "core.mjs")).href),
-    import(pathToFileURL(join(root, "runtime", "state.mjs")).href),
+    import(pathToFileURL(join(root, "runtime", "core.js")).href),
+    import(pathToFileURL(join(root, "runtime", "state.js")).href),
   ]);
-  return { ...core, ...state };
+  return { ...core, ...state } as HookRuntime;
 }
 
-function fits(parts) {
+function fits(parts: string[]): boolean {
   return Buffer.byteLength(parts.join("\n"), "utf8") <= MAX_CONTEXT_BYTES;
 }
 
-function omissionLine(count) {
+function omissionLine(count: number): string {
   return `[AtSkills] Omitted ${count} additional skill/menu entr${count === 1 ? "y" : "ies"} to keep hook context under ${MAX_CONTEXT_BYTES} bytes.`;
 }
 
-function renderContext(blocks, warnings = []) {
+function renderContext(blocks: string[], warnings: string[] = []): string {
   const prefix = [
     ...TRUST_HEADER.split("\n"),
     ...warnings.map((warning) => `[AtSkills warning] ${text(warning)}`),
   ];
-  const kept = [];
+  const kept: string[] = [];
   let omitted = 0;
 
   for (let index = 0; index < blocks.length; index += 1) {
@@ -93,14 +121,20 @@ function renderContext(blocks, warnings = []) {
   return output.join("\n");
 }
 
-function revisionFor(result, provenance) {
+function revisionFor(
+  result: RuntimeResult,
+  provenance: WorkspaceProvenance[] | undefined,
+): string | null {
   const revision = result?.revision ?? result?.provenance?.revision;
   if (typeof revision === "string" && revision && revision !== "unknown") return revision;
   const record = provenance?.find((entry) => entry.id === result?.id);
   return record?.revision && record.revision !== "unknown" ? record.revision : null;
 }
 
-function skillBlock(result, provenance) {
+function skillBlock(
+  result: RuntimeResult,
+  provenance: WorkspaceProvenance[] | undefined,
+): string | null {
   const id = text(result?.id, 400);
   const path = absoluteSkillPath(result?.path);
   if (!id || !path) return null;
@@ -113,12 +147,12 @@ function skillBlock(result, provenance) {
   ].join("\n");
 }
 
-function collectionBlocks(result) {
+function collectionBlocks(result: RuntimeResult): { blocks: string[]; warning?: string } {
   const id = text(result?.id, 400);
-  const entries = Array.isArray(result?.entries) ? result.entries : [];
+  const entries: SkillMenuEntry[] = Array.isArray(result?.entries) ? result.entries : [];
   if (!id || entries.length === 0) return { blocks: [], warning: `collection '${id || "(unknown)"}' is empty` };
 
-  const blocks = [`Collection: ${id}`];
+  const blocks: string[] = [`Collection: ${id}`];
   for (const entry of entries.slice(0, 128)) {
     const entryId = text(entry?.id, 400);
     if (!entryId) continue;
@@ -135,20 +169,26 @@ function collectionBlocks(result) {
   return { blocks };
 }
 
-function failureWarning(reference, result) {
-  const id = text(reference?.raw || reference?.id || "skill reference", 300);
+function failureWarning(
+  reference: ParsedSkillReference | undefined,
+  result: RuntimeResult | undefined,
+): string {
+  const id = text(reference?.raw || "skill reference", 300);
   const error = text(result?.error || reference?.error || "resolution failed", 360);
   return `${id}: ${error}`;
 }
 
-export async function buildPromptContext(input, runtime) {
+export async function buildPromptContext(
+  input: HookInput,
+  runtime?: HookRuntime,
+): Promise<string | null> {
   runtime ||= await loadRuntime();
   const prompt = typeof input?.prompt === "string" ? input.prompt : "";
   const references = runtime.parseSkillReferences(prompt);
   if (references.length === 0) return null;
 
   const selected = references.slice(0, MAX_REFERENCES);
-  const warnings = [];
+  const warnings: string[] = [];
   if (references.length > MAX_REFERENCES) {
     warnings.push(
       `Ignored ${references.length - MAX_REFERENCES} additional @skills reference${references.length - MAX_REFERENCES === 1 ? "" : "s"}; the maximum is ${MAX_REFERENCES} per prompt.`,
@@ -167,7 +207,7 @@ export async function buildPromptContext(input, runtime) {
     return renderContext([], warnings);
   }
 
-  const blocks = [];
+  const blocks: string[] = [];
   const seen = new Set();
   for (let index = 0; index < selected.length; index += 1) {
     const reference = selected[index];
@@ -178,11 +218,15 @@ export async function buildPromptContext(input, runtime) {
     }
 
     const result = item?.result;
-    const id = result?.id || reference.id;
+    const id = result?.id || ("id" in reference ? reference.id : undefined);
     if (typeof id === "string" && seen.has(id)) continue;
     if (typeof id === "string") seen.add(id);
 
     if (result?.kind === "skill") {
+      if (!id) {
+        warnings.push(`${text(reference.raw)}: resolver returned no skill id`);
+        continue;
+      }
       let provenance = null;
       try {
         provenance = runtime.readProvenance?.(id, resolverOptions.workingDir) || null;
@@ -211,7 +255,7 @@ export async function buildPromptContext(input, runtime) {
   return renderContext(blocks, warnings);
 }
 
-function sessionEntries(state) {
+function sessionEntries(state: WorkspaceState): SessionEntry[] {
   const resident = Array.isArray(state?.resident) && state.resident.length > 0
     ? state.resident
     : Array.isArray(state?.index?.resident)
@@ -229,7 +273,10 @@ function sessionEntries(state) {
   });
 }
 
-function sessionBlock(entry, provenance) {
+function sessionBlock(
+  entry: SessionEntry,
+  provenance: WorkspaceProvenance[],
+): string | null {
   if (entry?.error) return null;
   const id = text(entry?.id || entry?.line, 400);
   if (!id) return null;
@@ -243,12 +290,12 @@ function sessionBlock(entry, provenance) {
   return `Installed skill: ${id}\nSource: ${source}${revision}\nRead before use: ${path}`;
 }
 
-export function buildSessionContext(input, state) {
+export function buildSessionContext(_input: HookInput, state: WorkspaceState): string | null {
   const entries = sessionEntries(state);
   if (entries.length === 0) return null;
 
-  const warnings = [];
-  const blocks = [];
+  const warnings: string[] = [];
+  const blocks: string[] = [];
   for (const entry of entries) {
     if (entry?.error) {
       warnings.push(`ignored installed reference ${text(entry.line || "(unknown)")}: ${text(entry.error)}`);
@@ -264,19 +311,23 @@ export function buildSessionContext(input, state) {
   ]);
 }
 
-async function inputFromStdin() {
-  const chunks = [];
+async function inputFromStdin(): Promise<HookInput> {
+  const chunks: Array<Buffer | string> = [];
   for await (const chunk of process.stdin) chunks.push(chunk);
   const raw = Buffer.concat(chunks.map((chunk) => Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))).toString("utf8");
   if (!raw.trim()) return {};
-  return JSON.parse(raw);
+  const parsed: unknown = JSON.parse(raw);
+  return parsed && typeof parsed === "object" ? parsed as HookInput : {};
 }
 
-function warn(message) {
+function warn(message: unknown): void {
   process.stderr.write(`[atskills hook] ${text(message, 360)}\n`);
 }
 
-export async function handle(input, runtime) {
+export async function handle(
+  input: HookInput,
+  runtime?: HookRuntime,
+): Promise<HookOutput | null> {
   const event = input?.hook_event_name || (input?.source !== undefined ? "SessionStart" : "UserPromptSubmit");
   if (event === "UserPromptSubmit") {
     const context = await buildPromptContext(input, runtime);
@@ -284,7 +335,7 @@ export async function handle(input, runtime) {
       ? { hookSpecificOutput: { hookEventName: "UserPromptSubmit", additionalContext: context } }
       : null;
   }
-  if (event === "SessionStart" && SESSION_SOURCES.has(input?.source)) {
+  if (event === "SessionStart" && typeof input.source === "string" && SESSION_SOURCES.has(input.source)) {
     const loaded = runtime || (await loadRuntime());
     const state = loaded.readWorkspaceState(optionsFor(input).workingDir);
     const context = buildSessionContext(input, state);
@@ -295,8 +346,8 @@ export async function handle(input, runtime) {
   return null;
 }
 
-export async function main() {
-  let input;
+export async function main(): Promise<void> {
+  let input: HookInput;
   try {
     input = await inputFromStdin();
   } catch (error) {

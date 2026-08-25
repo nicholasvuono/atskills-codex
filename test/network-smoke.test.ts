@@ -4,14 +4,15 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
+import type { JsonObject, ProcessResult } from "./types.js";
 
 const repositoryRoot = resolve(process.cwd());
 const pluginRoot = join(repositoryRoot, "plugins", "atskills-codex");
-const cliPath = join(pluginRoot, "skills", "atskills", "scripts", "atskills.mjs");
+const cliPath = join(pluginRoot, "skills", "atskills", "scripts", "atskills.js");
 const enabled = process.env.ATSKILLS_NETWORK_SMOKE === "1";
 
-function runCli(args, env) {
-  return new Promise((resolveResult, reject) => {
+function runCli(args: string[], env: NodeJS.ProcessEnv): Promise<ProcessResult> {
+  return new Promise<ProcessResult>((resolveResult, reject) => {
     const child = spawn(process.execPath, [cliPath, ...args], {
       cwd: repositoryRoot,
       env: { ...process.env, ...env },
@@ -55,7 +56,7 @@ test("optional network smoke resolves an immutable public GitHub fixture", { ski
       ATSKILLS_GITHUB_BASE_URL: `file://${mirrorRoot}`,
     });
     assert.equal(result.code, 0, result.stderr);
-    const payload = JSON.parse(result.stdout);
+    const payload = JSON.parse(result.stdout) as JsonObject;
     assert.equal(payload.ok, true);
     assert.equal(payload.kind, "skill");
     assert.match(payload.content, /name:|description:/i);

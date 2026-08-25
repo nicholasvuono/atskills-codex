@@ -2,40 +2,53 @@ import {
   parseReference,
   resolveMany,
   resolveSkill as upstreamResolveSkill,
-} from "./atskills.mjs";
-import { resolveSafely } from "./security.mjs";
+} from "./atskills.js";
+import { resolveSafely } from "./security.js";
+import type {
+  ParsedReference,
+  ParsedSkillReference,
+  ResolvedReference,
+  ResolverOptions,
+  RuntimeResult,
+} from "./types.js";
 import {
   installSkill,
   removeSkill,
   saveSkill,
   uninstallSkill,
-} from "./state.mjs";
+} from "./state.js";
 
 const skillReference = /(?<![\p{L}\p{N}_@])@(?:skills|workflow):[^\s]*/gu;
 
-function errorMessage(error) {
+function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function resolveSkill(id, save, opts, install = false) {
+export function resolveSkill(
+  id: string,
+  save: boolean,
+  opts: ResolverOptions,
+  install = false,
+): Promise<RuntimeResult> {
   return resolveSafely(upstreamResolveSkill, id, save, opts, install);
 }
 
 /** Find @skills: references without making a bad reference abort the prompt. */
-export function parseSkillReferences(message) {
+export function parseSkillReferences(message: string): ParsedSkillReference[] {
   const text = String(message);
-  const references = [];
+  const references: ParsedSkillReference[] = [];
 
   for (const match of text.matchAll(skillReference)) {
     const raw = match[0];
     const start = match.index ?? 0;
     try {
-      references.push({
+      const reference: ParsedReference = {
         raw,
         start,
         end: start + raw.length,
         ...parseReference(raw),
-      });
+      };
+      references.push(reference);
     } catch (error) {
       references.push({
         raw,
@@ -50,19 +63,24 @@ export function parseSkillReferences(message) {
 }
 
 /** Parse and resolve every reference in message, preserving message order. */
-export async function resolveSkillReferences(message, opts) {
+export async function resolveSkillReferences(
+  message: string,
+  opts: ResolverOptions,
+): Promise<ResolvedReference[]> {
   const references = parseSkillReferences(message);
-  const valid = references.filter((reference) => !reference.error);
+  const valid = references.filter(
+    (reference): reference is ParsedReference => !reference.error && "id" in reference,
+  );
   const results = await resolveMany(
     valid.map((reference) => reference.id),
     valid.map(({ save, install }) => ({ save, install })),
-    (id, save, install) =>
+    (id: string, save: boolean, install: boolean): Promise<RuntimeResult> =>
       save
         ? saveSkill(id, { ...opts, install })
         : install
           ? installSkill(id, opts)
           : resolveSkill(id, false, opts),
-    (_id, error) => ({ success: false, error: errorMessage(error) }),
+    (_id: string, error: Error): RuntimeResult => ({ success: false, error: errorMessage(error) }),
   );
 
   let resultIndex = 0;
@@ -76,4 +94,4 @@ export async function resolveSkillReferences(message, opts) {
   );
 }
 
-export * from "./state.mjs";
+export * from "./state.js";

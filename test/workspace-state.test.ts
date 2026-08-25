@@ -11,20 +11,21 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import type { WorkspaceOptions } from "../plugins/atskills-codex/runtime/types.js";
 import {
   installSkill,
   readWorkspaceState,
   removeSkill,
   saveSkill,
   uninstallSkill,
-} from "../plugins/atskills-codex/runtime/state.mjs";
+} from "../plugins/atskills-codex/runtime/state.js";
 
 const fixtureRoot = mkdtempSync(join(tmpdir(), "atskills-state-fixture-"));
 const remotesRoot = join(fixtureRoot, "remotes");
 const githubBaseUrl = `file://${remotesRoot}`;
 
-function git(cwd, ...args) {
-  return execFileSync(
+function git(cwd: string, ...args: string[]): string {
+  return String(execFileSync(
     "git",
     [
       "-c",
@@ -36,10 +37,10 @@ function git(cwd, ...args) {
       ...args,
     ],
     { cwd, encoding: "utf8" },
-  ).trim();
+  )).trim();
 }
 
-function remote(owner, repo, files) {
+function remote(owner: string, repo: string, files: Record<string, string>): string {
   const dir = join(remotesRoot, owner, `${repo}.git`);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
@@ -57,7 +58,7 @@ function remote(owner, repo, files) {
   return git(dir, "rev-parse", "HEAD");
 }
 
-function project(name) {
+function project(name: string): { workingDir: string; opts: WorkspaceOptions } {
   const workingDir = mkdtempSync(join(fixtureRoot, `${name}-`));
   mkdirSync(join(workingDir, ".atskills"));
   return {
@@ -97,6 +98,7 @@ test("save writes provenance and index; install is idempotent and uninstall pres
   assert.equal(existsSync(join(dest, "SKILL.md")), true);
 
   const state = readWorkspaceState(workingDir);
+  assert.ok(state.index);
   assert.equal(state.index.version, 1);
   assert.equal(state.skills[0].saved, true);
   assert.equal(state.provenance[0].revision, sha);
@@ -122,7 +124,7 @@ test("edited saved content conflicts unless force is explicit", async () => {
 });
 
 test("oversized snapshots return TOO_LARGE without creating workspace content", async () => {
-  const files = { "mine/SKILL.md": skill() };
+  const files: Record<string, string> = { "mine/SKILL.md": skill() };
   for (let i = 0; i < 64; i++) files[`mine/r${i}.txt`] = "x";
   remote("acme", "many-files", files);
   const { workingDir, opts } = project("many-files");

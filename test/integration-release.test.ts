@@ -6,12 +6,13 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import type { JsonObject, ProcessResult, RunOptions } from "./types.js";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePlugin = join(repositoryRoot, "plugins", "atskills-codex");
 
-function git(cwd, ...args) {
-  return execFileSync(
+function git(cwd: string, ...args: string[]): string {
+  return String(execFileSync(
     "git",
     [
       "-c",
@@ -23,11 +24,15 @@ function git(cwd, ...args) {
       ...args,
     ],
     { cwd, encoding: "utf8" },
-  ).trim();
+  )).trim();
 }
 
-function run(file, args, { cwd, env, input = "" } = {}) {
-  return new Promise((resolveResult, reject) => {
+function run(
+  file: string,
+  args: string[],
+  { cwd, env, input = "" }: RunOptions = {},
+): Promise<ProcessResult> {
+  return new Promise<ProcessResult>((resolveResult, reject) => {
     const child = spawn(process.execPath, [file, ...args], {
       cwd: cwd ?? repositoryRoot,
       env: { ...process.env, ...env },
@@ -45,9 +50,11 @@ function run(file, args, { cwd, env, input = "" } = {}) {
   });
 }
 
-function json(result) {
+function json(result: ProcessResult): JsonObject {
   assert.equal(result.stdout.split("\n").filter(Boolean).length, 1, result.stderr);
-  return JSON.parse(result.stdout);
+  const parsed: unknown = JSON.parse(result.stdout);
+  assert.ok(parsed && typeof parsed === "object" && !Array.isArray(parsed));
+  return parsed as JsonObject;
 }
 
 test("copied installed plugin works end to end across CLI, hooks, and workspace state", async () => {
@@ -56,8 +63,8 @@ test("copied installed plugin works end to end across CLI, hooks, and workspace 
   const remotes = join(fixtureRoot, "remotes");
   const remote = join(remotes, "acme", "e2e.git");
   const installedPlugin = join(fixtureRoot, "installed-plugin");
-  const cli = join(installedPlugin, "skills", "atskills", "scripts", "atskills.mjs");
-  const hook = join(installedPlugin, "hooks", "atskills.mjs");
+  const cli = join(installedPlugin, "skills", "atskills", "scripts", "atskills.js");
+  const hook = join(installedPlugin, "hooks", "atskills.js");
   const env = {
     ATSKILLS_CACHE: join(fixtureRoot, "cache"),
     ATSKILLS_GITHUB_BASE_URL: `file://${remotes}`,
@@ -103,7 +110,7 @@ test("copied installed plugin works end to end across CLI, hooks, and workspace 
     });
     assert.equal(prompt.code, 0, prompt.stderr);
     assert.ok(prompt.stdout, JSON.stringify(prompt));
-    const promptContext = JSON.parse(prompt.stdout).hookSpecificOutput.additionalContext;
+    const promptContext = (JSON.parse(prompt.stdout) as JsonObject).hookSpecificOutput.additionalContext;
     assert.match(promptContext, /Skill: local/);
     assert.match(promptContext, /Skill: gh:acme\/e2e\/remote/);
     assert.doesNotMatch(promptContext, /LOCAL_BODY|REMOTE_BODY/);
@@ -119,12 +126,12 @@ test("copied installed plugin works end to end across CLI, hooks, and workspace 
     });
     assert.equal(session.code, 0, session.stderr);
     assert.ok(session.stdout, JSON.stringify(session));
-    const sessionContext = JSON.parse(session.stdout).hookSpecificOutput.additionalContext;
+    const sessionContext = (JSON.parse(session.stdout) as JsonObject).hookSpecificOutput.additionalContext;
     assert.match(sessionContext, /gh:acme\/e2e\/remote/);
     assert.match(sessionContext, /no network resolution/i);
 
     const listed = await run(cli, ["list", ...cwd], { env });
-    assert.equal(json(listed).skills.some((skill) => skill.id === "gh:acme/e2e/remote" && skill.installed), true);
+    assert.equal(json(listed).skills.some((skill: JsonObject) => skill.id === "gh:acme/e2e/remote" && skill.installed), true);
     assert.equal(existsSync(join(workspace, ".atskills", "gh", "acme", "e2e", "remote", "SKILL.md")), true);
 
     const removed = await run(cli, ["remove", "gh:acme/e2e/remote", "--yes", ...cwd], { env });

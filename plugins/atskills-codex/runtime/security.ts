@@ -1,10 +1,12 @@
 import { lstatSync } from "node:fs";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { DEFAULT_CACHE_DIR, skillsRoot } from "./atskills.mjs";
+import { DEFAULT_CACHE_DIR, skillsRoot } from "./atskills.js";
+import type { LoadResponse, SkillResolverOpts } from "./atskills.js";
+import type { ResolverOptions, ResultCode, RuntimeResult } from "./types.js";
 
 export const MAX_SKILL_BYTES = 256 * 1024;
 
-function within(root, target, mustExist = false) {
+function within(root: string, target: string, mustExist = false): boolean {
   const base = resolve(root);
   const absolute = resolve(target);
   const rel = relative(base, absolute);
@@ -24,18 +26,18 @@ function within(root, target, mustExist = false) {
   }
 }
 
-function allowedRoots(options = {}) {
+function allowedRoots(options: Partial<ResolverOptions>): string[] {
   return [
     skillsRoot(resolve(options.workingDir ?? process.cwd())),
     options.cacheDir ?? DEFAULT_CACHE_DIR,
   ];
 }
 
-export function isSafeWorkspacePath(root, target, mustExist = false) {
+export function isSafeWorkspacePath(root: string, target: string, mustExist = false): boolean {
   return within(root, target, mustExist);
 }
 
-function safeSkillPath(path, options) {
+function safeSkillPath(path: unknown, options: Partial<ResolverOptions>): path is string {
   return (
     typeof path === "string" &&
     isAbsolute(path) &&
@@ -44,19 +46,23 @@ function safeSkillPath(path, options) {
   );
 }
 
-function refusal(code, message) {
+function refusal(code: ResultCode, message: string): RuntimeResult {
   return { ok: false, success: false, code, error: message };
 }
 
-export function guardResolved(result, options = {}) {
+export function guardResolved(
+  result: LoadResponse | RuntimeResult,
+  options: Partial<ResolverOptions> = {},
+): RuntimeResult {
   if (!result?.success) return result;
 
   if (result.kind === "skill") {
-    if (!safeSkillPath(result.path, options)) {
+    const skillPath = result.path;
+    if (!safeSkillPath(skillPath, options)) {
       return refusal("INVALID_REF", "refusing a skill path outside the trusted workspace/cache or through a symlink");
     }
     try {
-      const stat = lstatSync(result.path);
+      const stat = lstatSync(skillPath);
       if (!stat.isFile()) return refusal("INVALID_REF", "resolved SKILL.md is not a regular file");
       if (stat.size > MAX_SKILL_BYTES) {
         return refusal(
@@ -80,6 +86,12 @@ export function guardResolved(result, options = {}) {
   return result;
 }
 
-export async function resolveSafely(resolver, id, save, options, install = false) {
+export async function resolveSafely(
+  resolver: (id: string, save: boolean, options: SkillResolverOpts, install?: boolean) => Promise<LoadResponse>,
+  id: string,
+  save: boolean,
+  options: ResolverOptions,
+  install = false,
+): Promise<RuntimeResult> {
   return guardResolved(await resolver(id, save, options, install), options);
 }

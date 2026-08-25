@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 import { test } from "node:test";
+import type { JsonObject } from "./types.js";
 
 const run = promisify(execFile);
 const repositoryRoot = process.cwd();
@@ -14,11 +15,11 @@ const artifactPath = join(
   "plugins",
   "atskills-codex",
   "runtime",
-  "atskills.mjs",
+  "atskills.js",
 );
 
-async function readJson(path) {
-  return JSON.parse(await readFile(path, "utf8"));
+async function readJson(path: string): Promise<JsonObject> {
+  return JSON.parse(await readFile(path, "utf8")) as JsonObject;
 }
 
 test("PR 2 pins the upstream source and exposes a bundled runtime", async () => {
@@ -26,7 +27,7 @@ test("PR 2 pins the upstream source and exposes a bundled runtime", async () => 
   const snapshot = await readJson(
     join(repositoryRoot, "vendor", "atskills.snapshot.json"),
   );
-  const runtime = await import(pathToFileURL(artifactPath));
+  const runtime = await import(pathToFileURL(artifactPath).href);
 
   assert.equal(snapshot.repository, config.repository);
   assert.equal(snapshot.commit, config.commit);
@@ -39,7 +40,7 @@ test("PR 2 pins the upstream source and exposes a bundled runtime", async () => 
 
 test("the checked-in runtime reproduces from the offline snapshot", async () => {
   const before = await readFile(artifactPath, "utf8");
-  await run(process.execPath, ["scripts/build.mjs"], { cwd: repositoryRoot });
+  await run(process.execPath, ["scripts/build.js"], { cwd: repositoryRoot });
   const after = await readFile(artifactPath, "utf8");
   assert.equal(after, before);
 });
@@ -47,9 +48,9 @@ test("the checked-in runtime reproduces from the offline snapshot", async () => 
 test("the runtime imports without repository dependencies", async () => {
   const tempRoot = await mkdtemp(join(tmpdir(), "atskills-runtime-test-"));
   try {
-    const copy = join(tempRoot, "atskills.mjs");
+    const copy = join(tempRoot, "atskills.js");
     await copyFile(artifactPath, copy);
-    const runtime = await import(pathToFileURL(copy));
+    const runtime = await import(pathToFileURL(copy).href);
     assert.equal(runtime.normalizeId("local/skill"), "local/skill");
   } finally {
     await rm(tempRoot, { recursive: true, force: true });

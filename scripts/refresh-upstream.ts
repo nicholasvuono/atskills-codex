@@ -13,7 +13,7 @@ const snapshotPath = join(repositoryRoot, "vendor", "atskills");
 const snapshotManifestPath = join(repositoryRoot, "vendor", "atskills.snapshot.json");
 const noticePath = join(repositoryRoot, "THIRD_PARTY_NOTICES.md");
 
-const config = JSON.parse(await readFile(configPath, "utf8"));
+const config: JsonRecord = JSON.parse(await readFile(configPath, "utf8")) as JsonRecord;
 if (
   typeof config.repository !== "string" ||
   !/^https:\/\/github\.com\/[^/]+\/[^/]+(?:\.git)?$/.test(config.repository) ||
@@ -28,7 +28,13 @@ const tempRoot = await mkdtemp(join(tmpdir(), "atskills-refresh-"));
 const checkoutPath = join(tempRoot, "checkout");
 const stagedSnapshotPath = join(tempRoot, "snapshot");
 
-async function git(args) {
+type JsonRecord = Record<string, any>;
+interface SnapshotFile {
+  path: string;
+  sha256: string;
+}
+
+async function git(args: string[]): Promise<string> {
   const { stdout } = await execFile("git", args, {
     cwd: checkoutPath,
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
@@ -37,7 +43,7 @@ async function git(args) {
   return stdout.trim();
 }
 
-async function findLicense(snapshot) {
+async function findLicense(snapshot: string): Promise<string> {
   const entries = await readdir(snapshot, { withFileTypes: true });
   const license = entries.find(
     (entry) =>
@@ -50,7 +56,7 @@ async function findLicense(snapshot) {
   return join(snapshot, license.name);
 }
 
-async function snapshotFiles(root, prefix = "") {
+async function snapshotFiles(root: string, prefix = ""): Promise<SnapshotFile[]> {
   const entries = (await readdir(join(root, prefix), { withFileTypes: true })).sort(
     (left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0),
   );
@@ -95,9 +101,9 @@ try {
 
   const licensePath = await findLicense(stagedSnapshotPath);
   const licenseText = (await readFile(licensePath, "utf8")).trim();
-  const ignorePackage = JSON.parse(
+  const ignorePackage: JsonRecord = JSON.parse(
     await readFile(join(repositoryRoot, "vendor", "ignore", "package.json"), "utf8"),
-  );
+  ) as JsonRecord;
   const ignoreLicense = (
     await readFile(join(repositoryRoot, "vendor", "ignore", "LICENSE-MIT"), "utf8")
   ).trim();

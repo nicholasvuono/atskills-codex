@@ -4,14 +4,15 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
+import type { JsonObject, ProcessResult } from "./types.js";
 
 const repositoryRoot = resolve(process.cwd());
 const pluginRoot = join(repositoryRoot, "plugins", "atskills-codex");
-const hookPath = join(pluginRoot, "hooks", "atskills.mjs");
+const hookPath = join(pluginRoot, "hooks", "atskills.js");
 const hooksConfigPath = join(pluginRoot, "hooks", "hooks.json");
 
-function runHook(input, env = {}) {
-  return new Promise((resolveResult, reject) => {
+function runHook(input: JsonObject, env: NodeJS.ProcessEnv = {}): Promise<ProcessResult> {
+  return new Promise<ProcessResult>((resolveResult, reject) => {
     const child = spawn(process.execPath, [hookPath], {
       cwd: repositoryRoot,
       env: { ...process.env, PLUGIN_ROOT: pluginRoot, ...env },
@@ -29,10 +30,12 @@ function runHook(input, env = {}) {
   });
 }
 
-function output(result) {
+function output(result: ProcessResult): JsonObject {
   assert.equal(result.code, 0, result.stderr);
   assert.ok(result.stdout, result.stderr);
-  return JSON.parse(result.stdout);
+  const parsed: unknown = JSON.parse(result.stdout);
+  assert.ok(parsed && typeof parsed === "object" && !Array.isArray(parsed));
+  return parsed as JsonObject;
 }
 
 async function workspace(name = "hooks") {
@@ -41,7 +44,12 @@ async function workspace(name = "hooks") {
   return root;
 }
 
-async function skill(root, id, name = id, body = "untrusted body") {
+async function skill(
+  root: string,
+  id: string,
+  name = id,
+  body = "untrusted body",
+): Promise<void> {
   const dir = join(root, ".atskills", ...id.split("/"));
   await mkdir(dir, { recursive: true });
   await writeFile(
@@ -51,12 +59,12 @@ async function skill(root, id, name = id, body = "untrusted body") {
 }
 
 test("hooks.json uses the default location, PLUGIN_ROOT command, matchers, and timeouts", async () => {
-  const config = JSON.parse(await readFile(hooksConfigPath, "utf8"));
+  const config = JSON.parse(await readFile(hooksConfigPath, "utf8")) as JsonObject;
   const prompt = config.hooks.UserPromptSubmit[0].hooks[0];
   const sessionGroup = config.hooks.SessionStart[0];
   const session = sessionGroup.hooks[0];
 
-  assert.equal(prompt.command, 'node "${PLUGIN_ROOT}/hooks/atskills.mjs"');
+  assert.equal(prompt.command, 'node "${PLUGIN_ROOT}/hooks/atskills.js"');
   assert.equal(prompt.timeout, 60);
   assert.equal(prompt.additionalContextLimit, 2000);
   assert.equal(sessionGroup.matcher, "startup|resume|clear|compact");

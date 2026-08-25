@@ -2,15 +2,22 @@
   "name": "atskills-codex",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Self-contained local Codex plugin for the @skills workflow.",
   "license": "MIT",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "refresh:upstream": "node scripts/refresh-upstream.mjs",
-    "test": "node --test test/*.test.mjs",
-    "check": "node scripts/check.mjs"
+    "compile": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "npm run compile && node scripts/build.js",
+    "test": "npm run compile && node --test test/*.test.js",
+    "check": "npm run build && node scripts/check.js",
+    "refresh:upstream": "npm run compile && node scripts/refresh-upstream.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3"
   }
 }

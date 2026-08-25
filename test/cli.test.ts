@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import type { JsonObject, ProcessResult } from "./types.js";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cliPath = join(
@@ -20,11 +21,11 @@ const cliPath = join(
   "skills",
   "atskills",
   "scripts",
-  "atskills.mjs",
+  "atskills.js",
 );
 
-function git(cwd, ...args) {
-  return execFileSync(
+function git(cwd: string, ...args: string[]): string {
+  return String(execFileSync(
     "git",
     [
       "-c",
@@ -36,11 +37,11 @@ function git(cwd, ...args) {
       ...args,
     ],
     { cwd, encoding: "utf8" },
-  ).trim();
+  )).trim();
 }
 
-function runCli(args, env = {}) {
-  return new Promise((resolveResult, reject) => {
+function runCli(args: string[], env: NodeJS.ProcessEnv = {}): Promise<ProcessResult> {
+  return new Promise<ProcessResult>((resolveResult, reject) => {
     const child = spawn(process.execPath, [cliPath, ...args], {
       cwd: repositoryRoot,
       env: { ...process.env, ...env },
@@ -57,9 +58,11 @@ function runCli(args, env = {}) {
   });
 }
 
-function jsonResult(run) {
+function jsonResult(run: ProcessResult): JsonObject {
   assert.equal(run.stdout.split("\n").filter(Boolean).length, 1, run.stderr);
-  return JSON.parse(run.stdout);
+  const parsed: unknown = JSON.parse(run.stdout);
+  assert.ok(parsed && typeof parsed === "object" && !Array.isArray(parsed));
+  return parsed as JsonObject;
 }
 
 test("CLI routes management commands through shared workspace state", async () => {
@@ -111,7 +114,7 @@ test("CLI routes management commands through shared workspace state", async () =
     const listed = await runCli(["list", ...cwd], env);
     const listJson = jsonResult(listed);
     assert.equal(listed.code, 0);
-    assert.equal(listJson.skills.some((skill) => skill.id === "gh:acme/cli/mine" && skill.installed), true);
+    assert.equal(listJson.skills.some((skill: JsonObject) => skill.id === "gh:acme/cli/mine" && skill.installed), true);
 
     const triggers = await runCli(["triggers", ...cwd], env);
     assert.equal(triggers.code, 0);

@@ -2,8 +2,8 @@
 
 import { existsSync, statSync } from "node:fs";
 import { isAbsolute } from "node:path";
-import { diskPath, normalizeId } from "../../../runtime/atskills.mjs";
-import { resolveSkill } from "../../../runtime/core.mjs";
+import { diskPath, normalizeId } from "../../../runtime/atskills.js";
+import { resolveSkill } from "../../../runtime/core.js";
 import {
   installSkill,
   readProvenance,
@@ -11,9 +11,56 @@ import {
   removeSkill,
   saveSkill,
   uninstallSkill,
-} from "../../../runtime/state.mjs";
+} from "../../../runtime/state.js";
+import type {
+  ResidentSkill,
+  SkillMenuEntry,
+  TriggerEntry,
+} from "../../../runtime/atskills.js";
+import type {
+  ResultCode,
+  RuntimeResult,
+  WorkspaceIndex,
+  WorkspaceOptions,
+  WorkspaceSkill,
+} from "../../../runtime/types.js";
 
-const COMMANDS = new Set([
+type Command =
+  | "get"
+  | "save"
+  | "install"
+  | "uninstall"
+  | "remove"
+  | "list"
+  | "triggers"
+  | "provenance";
+
+interface CliOptions {
+  cwd: string;
+  force: boolean;
+  json: boolean;
+  yes: boolean;
+}
+
+interface CliArgs {
+  command: Command;
+  options: CliOptions;
+  positionals: string[];
+}
+
+interface ListedSkill extends WorkspaceSkill {
+  installed: boolean;
+}
+
+interface CliResult extends RuntimeResult {
+  command: Command | null;
+  skills?: ListedSkill[];
+  triggers?: TriggerEntry[];
+  resident?: ResidentSkill[];
+  entries?: SkillMenuEntry[];
+}
+
+const COMMANDS: ReadonlySet<string> = new Set([
   "get",
   "save",
   "install",
@@ -23,32 +70,31 @@ const COMMANDS = new Set([
   "triggers",
   "provenance",
 ]);
-const ID_COMMANDS = new Set(["get", "save", "install", "uninstall", "remove", "provenance"]);
+const ID_COMMANDS: ReadonlySet<string> = new Set(["get", "save", "install", "uninstall", "remove", "provenance"]);
 
 class CliError extends Error {
-  constructor(message, code = "USAGE") {
+  constructor(message: string, readonly code: ResultCode = "USAGE") {
     super(message);
-    this.code = code;
   }
 }
 
-function writeOut(value) {
+function writeOut(value: unknown): void {
   process.stdout.write(`${String(value)}\n`);
 }
 
-function writeErr(value) {
+function writeErr(value: unknown): void {
   process.stderr.write(`${String(value)}\n`);
 }
 
-function parseArgs(argv) {
-  const options = {
+function parseArgs(argv: string[]): CliArgs {
+  const options: CliOptions = {
     cwd: process.cwd(),
     force: false,
     json: false,
     yes: false,
   };
   const positionals = [];
-  let command = null;
+  let command: Command | null = null;
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -73,7 +119,7 @@ function parseArgs(argv) {
     if (token.startsWith("-")) {
       throw new CliError(`unknown option: ${token}`);
     }
-    if (!command) command = token;
+    if (!command) command = token as Command;
     else positionals.push(token);
   }
 
@@ -100,7 +146,7 @@ function parseArgs(argv) {
   return { command, options, positionals };
 }
 
-function errorCode(message) {
+function errorCode(message: unknown): ResultCode {
   const text = String(message);
   if (/invalid|empty skill path|path escapes/i.test(text)) return "INVALID_REF";
   if (/too large|over the \d+|exceed/i.test(text)) return "TOO_LARGE";
@@ -109,12 +155,17 @@ function errorCode(message) {
   return "NETWORK";
 }
 
-function payload(command, result = {}) {
+function payload(command: Command | null, result: Partial<CliResult> = {}): CliResult {
   const ok = result.ok !== false && result.success !== false;
   return { command, ...result, ok };
 }
 
-function failure(command, code, error, extra = {}) {
+function failure(
+  command: Command | null,
+  code: ResultCode,
+  error: unknown,
+  extra: Partial<CliResult> = {},
+): CliResult {
   return payload(command, {
     ...extra,
     ok: false,
@@ -124,7 +175,7 @@ function failure(command, code, error, extra = {}) {
   });
 }
 
-function resultPayload(command, result) {
+function resultPayload(command: Command, result: RuntimeResult | null | undefined): CliResult {
   if (!result || typeof result !== "object") {
     return failure(command, "NETWORK", "the shared runtime returned no result");
   }
@@ -137,10 +188,10 @@ function resultPayload(command, result) {
   return payload(command, result);
 }
 
-function resolverOptions(workingDir) {
+function resolverOptions(workingDir: string): WorkspaceOptions {
   const log = {
-    info: (message) => writeErr(`[atskills] ${message}`),
-    warn: (message) => writeErr(`[atskills] ${message}`),
+    info: (message: string) => writeErr(`[atskills] ${message}`),
+    warn: (message: string) => writeErr(`[atskills] ${message}`),
   };
   return {
     workingDir,
@@ -150,9 +201,12 @@ function resolverOptions(workingDir) {
   };
 }
 
-function canonicalId(command, rawId) {
+function canonicalId(
+  command: Command,
+  rawId: string | undefined,
+): { id: string } | { error: CliResult } {
   try {
-    return { id: normalizeId(rawId) };
+    return { id: normalizeId(rawId ?? "") };
   } catch (error) {
     return {
       error: failure(command, "INVALID_REF", error instanceof Error ? error.message : error, {
@@ -162,7 +216,7 @@ function canonicalId(command, rawId) {
   }
 }
 
-function installed(id, triggers, resident) {
+function installed(id: string, triggers: TriggerEntry[], resident: ResidentSkill[]): boolean {
   const candidates = new Set([id, `@${id}`, diskPath(id)]);
   return (
     triggers.some((entry) => candidates.has(entry.line) || entry.id === id) ||
@@ -170,8 +224,12 @@ function installed(id, triggers, resident) {
   );
 }
 
-function workspaceView(workingDir) {
-  const index = rebuildWorkspaceIndex(workingDir);
+function workspaceView(workingDir: string): {
+  skills: ListedSkill[];
+  resident: ResidentSkill[];
+  triggers: TriggerEntry[];
+} {
+  const index: WorkspaceIndex = rebuildWorkspaceIndex(workingDir);
   const { skills, triggers, resident } = index;
   const listed = skills.map((skill) => ({
     ...skill,
@@ -184,7 +242,7 @@ function workspaceView(workingDir) {
   };
 }
 
-async function execute(args) {
+async function execute(args: CliArgs): Promise<CliResult> {
   const { command, options } = args;
   const workingDir = options.cwd;
   const opts = resolverOptions(workingDir);
@@ -204,7 +262,7 @@ async function execute(args) {
 
   const rawId = args.positionals[0];
   const canonical = canonicalId(command, rawId);
-  if (canonical.error) return canonical.error;
+  if ("error" in canonical) return canonical.error;
   const { id } = canonical;
 
   if (command === "get") {
@@ -244,7 +302,7 @@ async function execute(args) {
   throw new CliError(`unsupported command: ${command}`);
 }
 
-function renderHuman(result) {
+function renderHuman(result: CliResult): void {
   if (!result.ok) {
     writeErr(`atskills ${result.command ?? ""}: ${result.error}`.trim());
     return;
@@ -275,7 +333,7 @@ function renderHuman(result) {
       }
       return;
     case "provenance":
-      for (const key of ["id", "source", "revision", "path", "installed"]) {
+      for (const key of ["id", "source", "revision", "path", "installed"] as const) {
         if (result[key] !== undefined) writeOut(`${key}: ${result[key]}`);
       }
       return;
@@ -285,13 +343,13 @@ function renderHuman(result) {
   }
 }
 
-function emit(result, json) {
+function emit(result: CliResult, json: boolean): void {
   if (json) writeOut(JSON.stringify(result));
   else renderHuman(result);
 }
 
-async function main(argv = process.argv.slice(2)) {
-  let args;
+async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
+  let args: CliArgs;
   try {
     args = parseArgs(argv);
   } catch (error) {

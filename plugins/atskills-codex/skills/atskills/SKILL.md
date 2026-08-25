@@ -12,7 +12,7 @@ record.
 Run the bundled CLI with Node:
 
 ```sh
-node "$SKILL_DIR/scripts/atskills.mjs" <command> [id] --cwd <absolute-path>
+node "$SKILL_DIR/scripts/atskills.js" <command> [id] --cwd <absolute-path>
 ```
 
 Use `--json` when another tool needs the result. Use `--force` only when the

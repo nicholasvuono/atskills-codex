@@ -2,21 +2,28 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
+import type { JsonObject } from "./types.js";
 
 const repositoryRoot = process.cwd();
 const pluginRoot = join(repositoryRoot, "plugins", "atskills-codex");
 
-async function readJson(path) {
-  return JSON.parse(await readFile(path, "utf8"));
+async function readJson(path: string): Promise<JsonObject> {
+  return JSON.parse(await readFile(path, "utf8")) as JsonObject;
 }
 
 test("package declares the supported Node.js runtime and foundation scripts", async () => {
   const packageJson = await readJson(join(repositoryRoot, "package.json"));
 
   assert.equal(packageJson.engines.node, ">=20");
-  assert.equal(packageJson.scripts.build, "node scripts/build.mjs");
-  assert.equal(packageJson.scripts.test, "node --test test/*.test.mjs");
-  assert.equal(packageJson.scripts.check, "node scripts/check.mjs");
+  assert.equal(packageJson.type, "module");
+  assert.equal(packageJson.devDependencies.typescript, "^5.9.3");
+  assert.equal(packageJson.devDependencies["@types/node"], "^22.20.1");
+  assert.equal(packageJson.scripts.compile, "tsc -p tsconfig.json");
+  assert.equal(packageJson.scripts.typecheck, "tsc -p tsconfig.json --noEmit");
+  assert.equal(packageJson.scripts.build, "npm run compile && node scripts/build.js");
+  assert.equal(packageJson.scripts.test, "npm run compile && node --test test/*.test.js");
+  assert.equal(packageJson.scripts.check, "npm run build && node scripts/check.js");
+  assert.equal(packageJson.scripts["refresh:upstream"], "npm run compile && node scripts/refresh-upstream.js");
 });
 
 test("plugin manifest has valid PR 1 metadata", async () => {
@@ -39,7 +46,7 @@ test("repo marketplace points to the local plugin", async () => {
     join(repositoryRoot, ".agents", "plugins", "marketplace.json"),
   );
   const pluginEntry = marketplace.plugins.find(
-    (entry) => entry.name === "atskills-codex",
+    (entry: JsonObject) => entry.name === "atskills-codex",
   );
 
   assert.equal(marketplace.name, "atskills-local");

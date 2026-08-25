@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const pluginRoot = join(repositoryRoot, "plugins", "atskills-codex");
 
-function run(label, command, args) {
+function run(label: string, command: string, args: string[]): void {
   console.log(`\n== ${label} ==`);
   const result = spawnSync(command, args, {
     cwd: repositoryRoot,
@@ -42,12 +42,13 @@ function officialPluginValidator() {
 }
 
 try {
-  run("offline bundle reproduction", process.execPath, ["scripts/build.mjs"]);
-  run("release metadata and skill validator", process.execPath, ["scripts/release-check.mjs"]);
+  run("offline bundle reproduction", process.execPath, ["scripts/build.js"]);
+  run("release metadata and skill validator", process.execPath, ["scripts/release-check.js"]);
   officialPluginValidator();
-  run("unit, integration, and security tests", process.execPath, ["--test", "test/*.test.mjs"]);
+  run("unit, integration, and security tests", process.execPath, ["--test", "test/*.test.js"]);
   console.log("\nAtSkills PR-7 check passed.");
 } catch (error) {
-  console.error(`\nAtSkills PR-7 check failed: ${error.message}`);
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`\nAtSkills PR-7 check failed: ${message}`);
   process.exitCode = 1;
 }

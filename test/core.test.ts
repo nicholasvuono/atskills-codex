@@ -6,7 +6,7 @@ import { test } from "node:test";
 import {
   parseSkillReferences,
   resolveSkillReferences,
-} from "../plugins/atskills-codex/runtime/core.mjs";
+} from "../plugins/atskills-codex/runtime/core.js";
 
 test("parser extracts ordered references and keeps invalid ones visible", () => {
   const references = parseSkillReferences(
@@ -27,8 +27,8 @@ test("parser extracts ordered references and keeps invalid ones visible", () => 
       index: false,
     },
   );
-  assert.match(references[1].error, /invalid path segment/);
-  assert.equal(references[2].id, "local/two.");
+  assert.match(references[1].error ?? "", /invalid path segment/);
+  assert.equal("id" in references[2] ? references[2].id : undefined, "local/two.");
 });
 
 test("resolution uses the bundled core and keeps results aligned", async () => {
@@ -48,11 +48,11 @@ test("resolution uses the bundled core and keeps results aligned", async () => {
 
     assert.equal(references.length, 4);
     assert.equal(references[0].result.success, true);
-    assert.match(references[0].result.content, /body/);
+    assert.match(references[0].result.content ?? "", /body/);
     assert.equal(references[1].result.success, false);
-    assert.match(references[1].result.error, /invalid path segment/);
+    assert.match(references[1].result.error ?? "", /invalid path segment/);
     assert.equal(references[2].result.success, false);
-    assert.match(references[2].result.error, /No skill/);
+    assert.match(references[2].result.error ?? "", /No skill/);
     assert.strictEqual(references[0].result, references[3].result);
   } finally {
     await rm(workingDir, { recursive: true, force: true });
