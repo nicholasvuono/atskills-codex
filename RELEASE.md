@@ -24,13 +24,9 @@ trust the plugin hooks through `/hooks`, then validate in a fresh task.
 npm run check
 ```
 
-This runs the offline bundle reproduction, release metadata/skill checks, the
-available plugin validator, and all unit, integration, and security tests.
-The network smoke test is opt-in and is never part of ordinary CI:
-
-```sh
-ATSKILLS_NETWORK_SMOKE=1 npm test
-```
+This runs the available plugin validator plus the unit, integration, and
+security tests. The tests also reproduce the bundled runtime from the
+checked-in upstream snapshot.
 
 The normal build reads only the checked-in `vendor/atskills/` snapshot. The
 only command allowed to fetch upstream is:

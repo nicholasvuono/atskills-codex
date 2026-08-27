@@ -2,6 +2,7 @@
 
 import { existsSync, statSync } from "node:fs";
 import { isAbsolute } from "node:path";
+import { parseArgs } from "node:util";
 import { diskPath, normalizeId } from "../../../runtime/atskills.mjs";
 import { resolveSkill } from "../../../runtime/core.mjs";
 import {
@@ -13,24 +14,8 @@ import {
   uninstallSkill,
 } from "../../../runtime/state.mjs";
 
-const COMMANDS = new Set([
-  "get",
-  "save",
-  "install",
-  "uninstall",
-  "remove",
-  "list",
-  "triggers",
-  "provenance",
-]);
 const ID_COMMANDS = new Set(["get", "save", "install", "uninstall", "remove", "provenance"]);
-
-class CliError extends Error {
-  constructor(message, code = "USAGE") {
-    super(message);
-    this.code = code;
-  }
-}
+const COMMANDS = new Set([...ID_COMMANDS, "list", "triggers"]);
 
 function writeOut(value) {
   process.stdout.write(`${String(value)}\n`);
@@ -40,61 +25,37 @@ function writeErr(value) {
   process.stderr.write(`${String(value)}\n`);
 }
 
-function parseArgs(argv) {
-  const options = {
-    cwd: process.cwd(),
-    force: false,
-    json: false,
-    yes: false,
-  };
-  const positionals = [];
-  let command = null;
+function parseCliArgs(argv) {
+  const { values: options, positionals: args } = parseArgs({
+    args: argv,
+    allowPositionals: true,
+    options: {
+      cwd: { type: "string", default: process.cwd() },
+      force: { type: "boolean", default: false },
+      json: { type: "boolean", default: false },
+      yes: { type: "boolean", default: false },
+    },
+  });
+  const [command, ...positionals] = args;
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (token === "--json") {
-      options.json = true;
-      continue;
-    }
-    if (token === "--force") {
-      options.force = true;
-      continue;
-    }
-    if (token === "--yes") {
-      options.yes = true;
-      continue;
-    }
-    if (token === "--cwd") {
-      const value = argv[++index];
-      if (!value || value.startsWith("-")) throw new CliError("--cwd requires an absolute path");
-      options.cwd = value;
-      continue;
-    }
-    if (token.startsWith("-")) {
-      throw new CliError(`unknown option: ${token}`);
-    }
-    if (!command) command = token;
-    else positionals.push(token);
-  }
-
-  if (!command) throw new CliError("a command is required");
-  if (!COMMANDS.has(command)) throw new CliError(`unknown command: ${command}`);
-  if (!isAbsolute(options.cwd)) throw new CliError("--cwd must be an absolute path");
+  if (!command) throw new Error("a command is required");
+  if (!COMMANDS.has(command)) throw new Error(`unknown command: ${command}`);
+  if (!isAbsolute(options.cwd)) throw new Error("--cwd must be an absolute path");
   if (!existsSync(options.cwd) || !statSync(options.cwd).isDirectory()) {
-    throw new CliError(`--cwd is not an existing directory: ${options.cwd}`);
+    throw new Error(`--cwd is not an existing directory: ${options.cwd}`);
   }
   if (options.force && command !== "save") {
-    throw new CliError("--force is only valid with save");
+    throw new Error("--force is only valid with save");
   }
   if (options.yes && command !== "remove") {
-    throw new CliError("--yes is only valid with remove");
+    throw new Error("--yes is only valid with remove");
   }
 
   if (ID_COMMANDS.has(command) && positionals.length !== 1) {
-    throw new CliError(`${command} requires exactly one <id>`);
+    throw new Error(`${command} requires exactly one <id>`);
   }
   if (!ID_COMMANDS.has(command) && positionals.length !== 0) {
-    throw new CliError(`${command} does not accept an <id>`);
+    throw new Error(`${command} does not accept an <id>`);
   }
 
   return { command, options, positionals };
@@ -228,7 +189,7 @@ async function execute(args) {
         { id },
       );
     }
-    return resultPayload(command, removeSkill(id, { ...opts, yes: true }));
+    return resultPayload(command, removeSkill(id, { ...opts, confirm: true }));
   }
   if (command === "provenance") {
     const view = workspaceView(workingDir);
@@ -241,7 +202,7 @@ async function execute(args) {
     });
   }
 
-  throw new CliError(`unsupported command: ${command}`);
+  throw new Error(`unsupported command: ${command}`);
 }
 
 function renderHuman(result) {
@@ -293,12 +254,12 @@ function emit(result, json) {
 async function main(argv = process.argv.slice(2)) {
   let args;
   try {
-    args = parseArgs(argv);
+    args = parseCliArgs(argv);
   } catch (error) {
     const json = argv.includes("--json");
     const result = failure(
       null,
-      error instanceof CliError ? error.code : "USAGE",
+      "USAGE",
       error instanceof Error ? error.message : error,
     );
     emit(result, json);
@@ -312,7 +273,7 @@ async function main(argv = process.argv.slice(2)) {
   } catch (error) {
     const result = failure(
       args.command,
-      error instanceof CliError ? error.code : "NETWORK",
+      "NETWORK",
       error instanceof Error ? error.message : error,
     );
     emit(result, args.options.json);

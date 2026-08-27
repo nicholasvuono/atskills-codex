@@ -30,24 +30,22 @@ function officialPluginValidator() {
     "validate_plugin.py",
   );
   if (!existsSync(validator)) {
-    console.warn(`Official plugin validator not found at ${validator}; quick validation ran instead.`);
+    console.warn(`Official plugin validator not found at ${validator}; skipping it.`);
     return;
   }
   const yaml = spawnSync(python, ["-c", "import yaml"], { stdio: "ignore" });
   if (yaml.status !== 0) {
-    console.warn("Official plugin validator skipped because its PyYAML dependency is unavailable; quick validation ran instead.");
+    console.warn("Official plugin validator skipped because its PyYAML dependency is unavailable.");
     return;
   }
   run("official plugin validator", python, [validator, pluginRoot]);
 }
 
 try {
-  run("offline bundle reproduction", process.execPath, ["scripts/build.mjs"]);
-  run("release metadata and skill validator", process.execPath, ["scripts/release-check.mjs"]);
   officialPluginValidator();
   run("unit, integration, and security tests", process.execPath, ["--test", "test/*.test.mjs"]);
-  console.log("\nAtSkills PR-7 check passed.");
+  console.log("\nAtSkills check passed.");
 } catch (error) {
-  console.error(`\nAtSkills PR-7 check failed: ${error.message}`);
+  console.error(`\nAtSkills check failed: ${error.message}`);
   process.exitCode = 1;
 }

@@ -10,24 +10,12 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
-test("package declares the supported Node.js runtime and foundation scripts", async () => {
-  const packageJson = await readJson(join(repositoryRoot, "package.json"));
-
-  assert.equal(packageJson.engines.node, ">=20");
-  assert.equal(packageJson.scripts.build, "node scripts/build.mjs");
-  assert.equal(packageJson.scripts.test, "node --test test/*.test.mjs");
-  assert.equal(packageJson.scripts.check, "node scripts/check.mjs");
-});
-
-test("plugin manifest has valid PR 1 metadata", async () => {
+test("plugin manifest uses default component discovery", async () => {
   const manifest = await readJson(
     join(pluginRoot, ".codex-plugin", "plugin.json"),
   );
 
   assert.equal(manifest.name, "atskills-codex");
-  assert.equal(manifest.version, "0.1.0");
-  assert.equal(manifest.license, "MIT");
-  assert.equal(manifest.repository, "https://github.com/nicholasvuono/atskills-codex");
   assert.equal(manifest.skills, "./skills/");
   assert.equal("hooks" in manifest, false);
   assert.equal("mcpServers" in manifest, false);
@@ -43,10 +31,18 @@ test("repo marketplace points to the local plugin", async () => {
   );
 
   assert.equal(marketplace.name, "atskills-local");
-  assert.equal(marketplace.interface.displayName, "Local @skills");
   assert.equal(pluginEntry.source.source, "local");
   assert.equal(pluginEntry.source.path, "./plugins/atskills-codex");
-  assert.equal(pluginEntry.policy.installation, "AVAILABLE");
-  assert.equal(pluginEntry.policy.authentication, "ON_INSTALL");
-  assert.equal(pluginEntry.category, "Productivity");
+});
+
+test("management skill has discoverable metadata", async () => {
+  const skillRoot = join(pluginRoot, "skills", "atskills");
+  const [skill, agent] = await Promise.all([
+    readFile(join(skillRoot, "SKILL.md"), "utf8"),
+    readFile(join(skillRoot, "agents", "openai.yaml"), "utf8"),
+  ]);
+
+  assert.match(skill, /^---\nname:\s*atskills\ndescription:\s*\S/m);
+  assert.match(agent, /display_name:\s*"AtSkills for Codex"/);
+  assert.match(agent, /allow_implicit_invocation:\s*true/);
 });

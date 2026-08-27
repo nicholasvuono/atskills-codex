@@ -4,12 +4,7 @@ import {
   resolveSkill as upstreamResolveSkill,
 } from "./atskills.mjs";
 import { resolveSafely } from "./security.mjs";
-import {
-  installSkill,
-  removeSkill,
-  saveSkill,
-  uninstallSkill,
-} from "./state.mjs";
+import { installSkill, saveSkill } from "./state.mjs";
 
 const skillReference = /(?<![\p{L}\p{N}_@])@(?:skills|workflow):[^\s]*/gu;
 
