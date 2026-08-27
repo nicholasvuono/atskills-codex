@@ -13,9 +13,7 @@ import type {
 } from "./types.js";
 import {
   installSkill,
-  removeSkill,
   saveSkill,
-  uninstallSkill,
 } from "./state.js";
 
 const skillReference = /(?<![\p{L}\p{N}_@])@(?:skills|workflow):[^\s]*/gu;

@@ -7,9 +7,6 @@ import { isSafeWorkspacePath, MAX_SKILL_BYTES, resolveSafely, } from "./security
 export const MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024;
 export const MAX_SNAPSHOT_FILES = 64;
 export const WORKSPACE_INDEX_VERSION = 1;
-function warningOf(result) {
-    return result && "warning" in result ? result.warning : undefined;
-}
 function errorMessage(error) {
     return error instanceof Error ? error.message : String(error);
 }
@@ -259,13 +256,13 @@ function triggerCandidates(id) {
 }
 function rebuildAfterMutation(workingDir) {
     try {
-        return rebuildWorkspaceIndex(workingDir);
+        rebuildWorkspaceIndex(workingDir);
     }
     catch (error) {
-        return { warning: `workspace index was not rebuilt: ${errorMessage(error)}` };
+        return `workspace index was not rebuilt: ${errorMessage(error)}`;
     }
 }
-/** Save a detached snapshot with PR-4 size, conflict, and provenance rules. */
+/** Save a detached snapshot with size, conflict, and provenance rules. */
 export async function saveSkill(rawId, options = {}) {
     const id = stateId(rawId);
     if (typeof id !== "string")
@@ -347,8 +344,7 @@ export async function saveSkill(rawId, options = {}) {
             warning = `saved '${id}' but could not install it: ${errorMessage(error)}`;
         }
     }
-    const indexResult = rebuildAfterMutation(workingDir);
-    const indexWarning = warningOf(indexResult);
+    const indexWarning = rebuildAfterMutation(workingDir);
     if (indexWarning)
         warning = warning ? `${warning}; ${indexWarning}` : indexWarning;
     const provenance = provenanceFor(id, dest, resolverOptions, resolved);
@@ -387,8 +383,7 @@ export async function installSkill(rawId, options = {}) {
     catch (error) {
         return failure("CONFLICT", `could not update ${workspacePaths(workingDir).autotrigger}: ${errorMessage(error)}`);
     }
-    const indexResult = rebuildAfterMutation(workingDir);
-    const indexWarning = warningOf(indexResult);
+    const indexWarning = rebuildAfterMutation(workingDir);
     return success({
         ...resolved,
         id,
@@ -412,8 +407,7 @@ export function uninstallSkill(rawId, options = {}) {
             removed = removeTriggerLine(root, entry.line) || removed;
         }
     }
-    const indexResult = removed ? rebuildAfterMutation(workingDir) : null;
-    const indexWarning = warningOf(indexResult);
+    const indexWarning = removed ? rebuildAfterMutation(workingDir) : undefined;
     return success({
         id,
         installed: false,
@@ -458,8 +452,7 @@ export function removeSkill(rawId, options = {}) {
         return failure("CONFLICT", `could not remove '${id}': ${errorMessage(error)}`);
     }
     const uninstall = uninstallSkill(id, { workingDir });
-    const indexResult = rebuildAfterMutation(workingDir);
-    const warning = [uninstall.warning, warningOf(indexResult)].filter(Boolean).join("; ");
+    const warning = [uninstall.warning, rebuildAfterMutation(workingDir)].filter(Boolean).join("; ");
     return success({
         id,
         removed: true,

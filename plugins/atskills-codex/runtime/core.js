@@ -1,6 +1,6 @@
 import { parseReference, resolveMany, resolveSkill as upstreamResolveSkill, } from "./atskills.js";
 import { resolveSafely } from "./security.js";
-import { installSkill, removeSkill, saveSkill, uninstallSkill, } from "./state.js";
+import { installSkill, saveSkill, } from "./state.js";
 const skillReference = /(?<![\p{L}\p{N}_@])@(?:skills|workflow):[^\s]*/gu;
 function errorMessage(error) {
     return error instanceof Error ? error.message : String(error);

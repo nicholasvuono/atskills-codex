@@ -4,7 +4,7 @@ import { isAbsolute } from "node:path";
 import { diskPath, normalizeId } from "../../../runtime/atskills.js";
 import { resolveSkill } from "../../../runtime/core.js";
 import { installSkill, readProvenance, rebuildWorkspaceIndex, removeSkill, saveSkill, uninstallSkill, } from "../../../runtime/state.js";
-const COMMANDS = new Set([
+const COMMANDS = [
     "get",
     "save",
     "install",
@@ -13,7 +13,7 @@ const COMMANDS = new Set([
     "list",
     "triggers",
     "provenance",
-]);
+];
 const ID_COMMANDS = new Set(["get", "save", "install", "uninstall", "remove", "provenance"]);
 class CliError extends Error {
     code;
@@ -61,15 +61,16 @@ function parseArgs(argv) {
         if (token.startsWith("-")) {
             throw new CliError(`unknown option: ${token}`);
         }
-        if (!command)
-            command = token;
+        if (!command) {
+            command = COMMANDS.find((candidate) => candidate === token) ?? null;
+            if (!command)
+                throw new CliError(`unknown command: ${token}`);
+        }
         else
             positionals.push(token);
     }
     if (!command)
         throw new CliError("a command is required");
-    if (!COMMANDS.has(command))
-        throw new CliError(`unknown command: ${command}`);
     if (!isAbsolute(options.cwd))
         throw new CliError("--cwd must be an absolute path");
     if (!existsSync(options.cwd) || !statSync(options.cwd).isDirectory()) {

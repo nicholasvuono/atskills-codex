@@ -92,6 +92,17 @@ test("copied installed plugin works end to end across CLI, hooks, and workspace 
     assert.equal(local.code, 0, local.stderr);
     assert.match(json(local).content, /LOCAL_BODY/);
 
+    const human = await run(cli, ["get", "local", "--cwd", workspace], { env });
+    assert.equal(human.code, 0, human.stderr);
+    assert.match(human.stdout, /LOCAL_BODY/);
+
+    const invalidCwd = await run(cli, ["list", "--cwd", "relative", "--json"], { env });
+    const invalidCwdJson = json(invalidCwd);
+    assert.equal(invalidCwd.code, 2);
+    assert.equal(invalidCwdJson.ok, false);
+    assert.equal(invalidCwdJson.code, "USAGE");
+    assert.match(invalidCwdJson.error, /absolute path/);
+
     const saved = await run(cli, ["save", "gh:acme/e2e/remote", ...cwd], { env });
     assert.equal(saved.code, 0, saved.stderr);
     assert.equal(json(saved).saved, true);
@@ -99,6 +110,24 @@ test("copied installed plugin works end to end across CLI, hooks, and workspace 
     const installed = await run(cli, ["install", "gh:acme/e2e/remote", ...cwd], { env });
     assert.equal(installed.code, 0, installed.stderr);
     assert.equal(json(installed).installed, true);
+
+    const triggers = await run(cli, ["triggers", ...cwd], { env });
+    assert.equal(triggers.code, 0, triggers.stderr);
+    assert.equal(json(triggers).triggers[0].line, "gh/acme/e2e/remote");
+
+    const provenance = await run(cli, ["provenance", "gh:acme/e2e/remote", ...cwd], { env });
+    const provenanceJson = json(provenance);
+    assert.equal(provenance.code, 0, provenance.stderr);
+    assert.equal(provenanceJson.source, "github");
+    assert.equal(provenanceJson.installed, true);
+
+    const uninstalled = await run(cli, ["uninstall", "gh:acme/e2e/remote", ...cwd], { env });
+    assert.equal(uninstalled.code, 0, uninstalled.stderr);
+    assert.equal(json(uninstalled).installed, false);
+
+    const reinstalled = await run(cli, ["install", "gh:acme/e2e/remote", ...cwd], { env });
+    assert.equal(reinstalled.code, 0, reinstalled.stderr);
+    assert.equal(json(reinstalled).installed, true);
 
     const prompt = await run(hook, [], {
       env: { ...env, PLUGIN_ROOT: installedPlugin },
@@ -133,6 +162,11 @@ test("copied installed plugin works end to end across CLI, hooks, and workspace 
     const listed = await run(cli, ["list", ...cwd], { env });
     assert.equal(json(listed).skills.some((skill: JsonObject) => skill.id === "gh:acme/e2e/remote" && skill.installed), true);
     assert.equal(existsSync(join(workspace, ".atskills", "gh", "acme", "e2e", "remote", "SKILL.md")), true);
+
+    const refused = await run(cli, ["remove", "gh:acme/e2e/remote", ...cwd], { env });
+    assert.equal(refused.code, 1);
+    assert.equal(json(refused).code, "CONFIRMATION_REQUIRED");
+    assert.equal(existsSync(join(workspace, ".atskills", "gh", "acme", "e2e", "remote")), true);
 
     const removed = await run(cli, ["remove", "gh:acme/e2e/remote", "--yes", ...cwd], { env });
     assert.equal(removed.code, 0, removed.stderr);

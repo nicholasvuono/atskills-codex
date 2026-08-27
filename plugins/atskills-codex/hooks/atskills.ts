@@ -6,7 +6,6 @@ import type {
   HookInput,
   HookOutput,
   ParsedSkillReference,
-  ResolvedReference,
   ResolverOptions,
   RuntimeResult,
   WorkspaceProvenance,
@@ -26,12 +25,7 @@ const TRUST_HEADER = [
 
 const hookFile = fileURLToPath(import.meta.url);
 
-interface HookRuntime {
-  parseSkillReferences(message: string): ParsedSkillReference[];
-  resolveSkillReferences(message: string, options: ResolverOptions): Promise<ResolvedReference[]>;
-  readProvenance?(id: string, workingDir?: string): WorkspaceProvenance | null;
-  readWorkspaceState(workingDir?: string): WorkspaceState;
-}
+type HookRuntime = typeof import("../runtime/core.js");
 
 interface SessionEntry {
   id?: string;
@@ -71,11 +65,7 @@ export async function loadRuntime(
   pluginRoot = process.env.PLUGIN_ROOT,
 ): Promise<HookRuntime> {
   const root = resolve(pluginRoot || resolve(hookFile, "..", ".."));
-  const [core, state] = await Promise.all([
-    import(pathToFileURL(join(root, "runtime", "core.js")).href),
-    import(pathToFileURL(join(root, "runtime", "state.js")).href),
-  ]);
-  return { ...core, ...state } as HookRuntime;
+  return import(pathToFileURL(join(root, "runtime", "core.js")).href) as Promise<HookRuntime>;
 }
 
 function fits(parts: string[]): boolean {

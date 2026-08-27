@@ -62,8 +62,8 @@ const [pkg, manifest, marketplace, hooks, upstream, snapshot, skill, agent, rele
 
 expect(pkg?.type === "module", "package.json must declare ESM output");
 expect(pkg?.engines?.node === ">=20", "package.json must require Node.js >=20");
-expect(pkg?.devDependencies?.typescript, "typescript must be a development dependency");
-expect(pkg?.devDependencies?.["@types/node"], "@types/node must be a development dependency");
+expect(pkg?.devDependencies?.typescript === "^5.9.3", "typescript dependency version is incorrect");
+expect(pkg?.devDependencies?.["@types/node"] === "^22.20.1", "@types/node dependency version is incorrect");
 expect(pkg?.scripts?.compile === "tsc -p tsconfig.json", "compile script is incorrect");
 expect(pkg?.scripts?.typecheck === "tsc -p tsconfig.json --noEmit", "typecheck script is incorrect");
 expect(pkg?.scripts?.build === "npm run compile && node scripts/build.js", "build script is incorrect");
@@ -74,6 +74,7 @@ expect(pkg?.scripts?.["refresh:upstream"] === "npm run compile && node scripts/r
 expect(manifest?.name === "atskills-codex", "plugin name must be atskills-codex");
 expect(manifest?.version === "0.1.0", "plugin version must remain 0.1.0 until a release version is chosen");
 expect(manifest?.license === "MIT", "plugin license must be MIT");
+expect(manifest?.repository === "https://github.com/nicholasvuono/atskills-codex", "plugin repository is incorrect");
 expect(manifest?.skills === "./skills/", "plugin skills path must be ./skills/");
 expect(manifest?.interface?.displayName === "AtSkills for Codex", "plugin display name is incomplete");
 for (const field of ["hooks", "apps", "mcpServers"]) {
@@ -82,16 +83,22 @@ for (const field of ["hooks", "apps", "mcpServers"]) {
 
 const pluginEntry = marketplace?.plugins?.find((entry: JsonRecord | undefined) => entry?.name === "atskills-codex");
 expect(marketplace?.name === "atskills-local", "marketplace name must be atskills-local");
+expect(marketplace?.interface?.displayName === "Local @skills", "marketplace display name is incorrect");
 expect(pluginEntry?.source?.source === "local", "marketplace plugin source must be local");
 expect(pluginEntry?.source?.path === "./plugins/atskills-codex", "marketplace source path is incorrect");
+expect(pluginEntry?.policy?.installation === "AVAILABLE", "marketplace installation policy is incorrect");
+expect(pluginEntry?.policy?.authentication === "ON_INSTALL", "marketplace authentication policy is incorrect");
+expect(pluginEntry?.category === "Productivity", "marketplace category is incorrect");
 
 const promptHook = hooks?.hooks?.UserPromptSubmit?.[0]?.hooks?.[0];
 const sessionGroup = hooks?.hooks?.SessionStart?.[0];
 const sessionHook = sessionGroup?.hooks?.[0];
 expect(promptHook?.command === 'node "${PLUGIN_ROOT}/hooks/atskills.js"', "prompt hook command is incorrect");
 expect(promptHook?.timeout === 60, "prompt hook timeout must be 60 seconds");
+expect(promptHook?.additionalContextLimit === 2000, "prompt hook context limit is incorrect");
 expect(sessionGroup?.matcher === "startup|resume|clear|compact", "SessionStart matcher is incomplete");
 expect(sessionHook?.command === promptHook?.command && sessionHook?.timeout === 5, "session hook command/timeout is incorrect");
+expect(sessionHook?.additionalContextLimit === 2000, "session hook context limit is incorrect");
 
 expect(upstream?.repository === snapshot?.repository, "upstream snapshot repository metadata differs");
 expect(upstream?.commit === snapshot?.commit && /^[0-9a-f]{40}$/.test(upstream?.commit ?? ""), "upstream snapshot commit is not immutable");

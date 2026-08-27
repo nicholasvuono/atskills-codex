@@ -22,7 +22,7 @@ async function readJson(path: string): Promise<JsonObject> {
   return JSON.parse(await readFile(path, "utf8")) as JsonObject;
 }
 
-test("PR 2 pins the upstream source and exposes a bundled runtime", async () => {
+test("the pinned upstream source is exposed by the bundled runtime", async () => {
   const config = await readJson(join(repositoryRoot, "upstream.json"));
   const snapshot = await readJson(
     join(repositoryRoot, "vendor", "atskills.snapshot.json"),

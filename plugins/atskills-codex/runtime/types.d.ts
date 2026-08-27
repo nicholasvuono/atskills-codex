@@ -23,13 +23,9 @@ export type RuntimeResult = Omit<Partial<LoadResponse>, "kind" | "entries" | "fi
   kind?: "skill" | "menu" | "collection";
   entries?: SkillMenuEntry[];
   ok?: boolean;
-  success?: boolean;
   code?: ResultCode;
-  id?: string;
-  error?: string;
   source?: string;
   provenance?: { revision?: string };
-  warning?: string;
   saved?: boolean;
   installed?: boolean;
   added?: boolean;

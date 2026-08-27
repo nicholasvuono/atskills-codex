@@ -6,11 +6,12 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import type { WorkspaceOptions } from "../plugins/atskills-codex/runtime/types.js";
 import {
   installSkill,
@@ -23,6 +24,8 @@ import {
 const fixtureRoot = mkdtempSync(join(tmpdir(), "atskills-state-fixture-"));
 const remotesRoot = join(fixtureRoot, "remotes");
 const githubBaseUrl = `file://${remotesRoot}`;
+
+after(() => rmSync(fixtureRoot, { recursive: true, force: true }));
 
 function git(cwd: string, ...args: string[]): string {
   return String(execFileSync(

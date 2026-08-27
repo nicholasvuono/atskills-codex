@@ -36,11 +36,7 @@ function optionsFor(input) {
 }
 export async function loadRuntime(pluginRoot = process.env.PLUGIN_ROOT) {
     const root = resolve(pluginRoot || resolve(hookFile, "..", ".."));
-    const [core, state] = await Promise.all([
-        import(pathToFileURL(join(root, "runtime", "core.js")).href),
-        import(pathToFileURL(join(root, "runtime", "state.js")).href),
-    ]);
-    return { ...core, ...state };
+    return import(pathToFileURL(join(root, "runtime", "core.js")).href);
 }
 function fits(parts) {
     return Buffer.byteLength(parts.join("\n"), "utf8") <= MAX_CONTEXT_BYTES;

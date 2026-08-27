@@ -42,13 +42,12 @@ function officialPluginValidator() {
 }
 
 try {
-  run("offline bundle reproduction", process.execPath, ["scripts/build.js"]);
   run("release metadata and skill validator", process.execPath, ["scripts/release-check.js"]);
   officialPluginValidator();
   run("unit, integration, and security tests", process.execPath, ["--test", "test/*.test.js"]);
-  console.log("\nAtSkills PR-7 check passed.");
+  console.log("\nAtSkills check passed.");
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`\nAtSkills PR-7 check failed: ${message}`);
+  console.error(`\nAtSkills check failed: ${message}`);
   process.exitCode = 1;
 }

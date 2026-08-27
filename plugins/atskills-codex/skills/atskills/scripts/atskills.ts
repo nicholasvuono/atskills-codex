@@ -25,15 +25,17 @@ import type {
   WorkspaceSkill,
 } from "../../../runtime/types.js";
 
-type Command =
-  | "get"
-  | "save"
-  | "install"
-  | "uninstall"
-  | "remove"
-  | "list"
-  | "triggers"
-  | "provenance";
+const COMMANDS = [
+  "get",
+  "save",
+  "install",
+  "uninstall",
+  "remove",
+  "list",
+  "triggers",
+  "provenance",
+] as const;
+type Command = (typeof COMMANDS)[number];
 
 interface CliOptions {
   cwd: string;
@@ -60,17 +62,7 @@ interface CliResult extends RuntimeResult {
   entries?: SkillMenuEntry[];
 }
 
-const COMMANDS: ReadonlySet<string> = new Set([
-  "get",
-  "save",
-  "install",
-  "uninstall",
-  "remove",
-  "list",
-  "triggers",
-  "provenance",
-]);
-const ID_COMMANDS: ReadonlySet<string> = new Set(["get", "save", "install", "uninstall", "remove", "provenance"]);
+const ID_COMMANDS: ReadonlySet<Command> = new Set(["get", "save", "install", "uninstall", "remove", "provenance"]);
 
 class CliError extends Error {
   constructor(message: string, readonly code: ResultCode = "USAGE") {
@@ -119,12 +111,13 @@ function parseArgs(argv: string[]): CliArgs {
     if (token.startsWith("-")) {
       throw new CliError(`unknown option: ${token}`);
     }
-    if (!command) command = token as Command;
-    else positionals.push(token);
+    if (!command) {
+      command = COMMANDS.find((candidate) => candidate === token) ?? null;
+      if (!command) throw new CliError(`unknown command: ${token}`);
+    } else positionals.push(token);
   }
 
   if (!command) throw new CliError("a command is required");
-  if (!COMMANDS.has(command)) throw new CliError(`unknown command: ${command}`);
   if (!isAbsolute(options.cwd)) throw new CliError("--cwd must be an absolute path");
   if (!existsSync(options.cwd) || !statSync(options.cwd).isDirectory()) {
     throw new CliError(`--cwd is not an existing directory: ${options.cwd}`);

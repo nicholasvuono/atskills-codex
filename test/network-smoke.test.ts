@@ -31,8 +31,8 @@ function runCli(args: string[], env: NodeJS.ProcessEnv): Promise<ProcessResult> 
 
 test("optional network smoke resolves an immutable public GitHub fixture", { skip: !enabled }, async () => {
   const workspace = await mkdtemp(join(tmpdir(), "atskills-network-smoke-"));
-  const id = process.env.ATSKILLS_NETWORK_ID || "gh:SylphAI-Inc/atskills/examples/simple-tdd";
-  const expectedRevision = process.env.ATSKILLS_NETWORK_SHA || "858802c58636e43d04edae51d4ac5d7c3819decf";
+  const id = "gh:SylphAI-Inc/atskills/examples/simple-tdd";
+  const expectedRevision = "858802c58636e43d04edae51d4ac5d7c3819decf";
   const mirrorRoot = join(workspace, "remotes");
   const mirror = join(mirrorRoot, "SylphAI-Inc", "atskills.git");
   try {
