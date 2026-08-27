@@ -6,11 +6,12 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import {
   installSkill,
   readWorkspaceState,
@@ -22,6 +23,7 @@ import {
 const fixtureRoot = mkdtempSync(join(tmpdir(), "atskills-state-fixture-"));
 const remotesRoot = join(fixtureRoot, "remotes");
 const githubBaseUrl = `file://${remotesRoot}`;
+after(() => rmSync(fixtureRoot, { recursive: true, force: true }));
 
 function git(cwd, ...args) {
   return execFileSync(
@@ -73,7 +75,7 @@ function project(name) {
 const skill = (description = "a saved skill") =>
   `---\nname: mine\ndescription: ${description}\n---\nbody\n`;
 
-test("save writes provenance and index; install is idempotent and uninstall preserves it", async () => {
+test("save, install, uninstall, and confirmed removal preserve workspace state", async () => {
   const sha = remote("acme", "state", { "mine/SKILL.md": skill() });
   const { workingDir, opts } = project("state");
 
@@ -101,6 +103,13 @@ test("save writes provenance and index; install is idempotent and uninstall pres
   assert.equal(state.skills[0].saved, true);
   assert.equal(state.provenance[0].revision, sha);
   assert.equal(state.triggers.length, 0);
+
+  await installSkill("gh:acme/state/mine", opts);
+  assert.equal(removeSkill("gh:acme/state/mine", opts).code, "CONFIRMATION_REQUIRED");
+  assert.equal(existsSync(dest), true);
+  assert.equal(removeSkill("gh:acme/state/mine", { ...opts, confirm: true }).success, true);
+  assert.equal(existsSync(dest), false);
+  assert.equal(readWorkspaceState(workingDir).triggers.length, 0);
 });
 
 test("edited saved content conflicts unless force is explicit", async () => {
@@ -138,22 +147,4 @@ test("oversized snapshots return TOO_LARGE without creating workspace content", 
   assert.equal(bytes.success, false);
   assert.equal(bytes.code, "TOO_LARGE");
   assert.equal(existsSync(join(second.workingDir, ".atskills", "gh")), false);
-});
-
-test("remove requires confirmation and deletes only the saved snapshot", async () => {
-  remote("acme", "remove", { "mine/SKILL.md": skill() });
-  const { workingDir, opts } = project("remove");
-  const dest = join(workingDir, ".atskills", "gh", "acme", "remove", "mine");
-
-  await saveSkill("gh:acme/remove/mine", opts);
-  await installSkill("gh:acme/remove/mine", opts);
-
-  const refused = removeSkill("gh:acme/remove/mine", opts);
-  assert.equal(refused.code, "CONFIRMATION_REQUIRED");
-  assert.equal(existsSync(dest), true);
-
-  const removed = removeSkill("gh:acme/remove/mine", { ...opts, confirm: true });
-  assert.equal(removed.success, true);
-  assert.equal(existsSync(dest), false);
-  assert.equal(readWorkspaceState(workingDir).triggers.length, 0);
 });

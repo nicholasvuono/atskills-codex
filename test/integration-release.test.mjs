@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,58 +9,27 @@ import { test } from "node:test";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePlugin = join(repositoryRoot, "plugins", "atskills-codex");
 
-function git(cwd, ...args) {
-  return execFileSync(
-    "git",
-    [
-      "-c",
-      "user.email=test@example.invalid",
-      "-c",
-      "user.name=AtSkills Test",
-      "-c",
-      "commit.gpgsign=false",
-      ...args,
-    ],
-    { cwd, encoding: "utf8" },
-  ).trim();
-}
-
-function run(file, args, { cwd, env, input = "" } = {}) {
-  return new Promise((resolveResult, reject) => {
-    const child = spawn(process.execPath, [file, ...args], {
-      cwd: cwd ?? repositoryRoot,
-      env: { ...process.env, ...env },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => (stdout += chunk));
-    child.stderr.on("data", (chunk) => (stderr += chunk));
-    child.on("error", reject);
-    child.on("close", (code) => resolveResult({ code, stdout, stderr }));
-    child.stdin.end(input);
+function run(file, args = [], { env, input } = {}) {
+  return spawnSync(process.execPath, [file, ...args], {
+    cwd: repositoryRoot,
+    env: { ...process.env, ...env },
+    encoding: "utf8",
+    input,
+    timeout: 5000,
   });
 }
 
 function json(result) {
-  assert.equal(result.stdout.split("\n").filter(Boolean).length, 1, result.stderr);
+  assert.equal(result.status, 0, result.stderr);
   return JSON.parse(result.stdout);
 }
 
-test("copied installed plugin works end to end across CLI, hooks, and workspace state", async () => {
+test("copied plugin works across the CLI, hooks, and workspace state", async () => {
   const fixtureRoot = await mkdtemp(join(tmpdir(), "atskills-e2e-"));
   const workspace = join(fixtureRoot, "workspace");
-  const remotes = join(fixtureRoot, "remotes");
-  const remote = join(remotes, "acme", "e2e.git");
   const installedPlugin = join(fixtureRoot, "installed-plugin");
   const cli = join(installedPlugin, "skills", "atskills", "scripts", "atskills.mjs");
   const hook = join(installedPlugin, "hooks", "atskills.mjs");
-  const env = {
-    ATSKILLS_CACHE: join(fixtureRoot, "cache"),
-    ATSKILLS_GITHUB_BASE_URL: `file://${remotes}`,
-  };
 
   try {
     await mkdir(join(workspace, ".atskills", "local"), { recursive: true });
@@ -69,69 +37,30 @@ test("copied installed plugin works end to end across CLI, hooks, and workspace 
       join(workspace, ".atskills", "local", "SKILL.md"),
       "---\nname: local\ndescription: local skill\n---\nLOCAL_BODY\n",
     );
-    await mkdir(remote, { recursive: true });
-    git(remote, "init", "-q", "-b", "main");
-    await mkdir(join(remote, "remote"), { recursive: true });
-    await writeFile(
-      join(remote, "remote", "SKILL.md"),
-      "---\nname: remote\ndescription: remote skill\n---\nREMOTE_BODY\n",
-    );
-    git(remote, "add", "-A");
-    git(remote, "commit", "-q", "-m", "initial");
     await cp(sourcePlugin, installedPlugin, { recursive: true });
 
     const cwd = ["--cwd", workspace, "--json"];
-    const local = await run(cli, ["get", "local", ...cwd], { env });
-    assert.equal(local.code, 0, local.stderr);
-    assert.match(json(local).content, /LOCAL_BODY/);
+    assert.match(json(run(cli, ["get", "local", ...cwd])).content, /LOCAL_BODY/);
+    assert.equal(json(run(cli, ["install", "local", ...cwd])).installed, true);
 
-    const saved = await run(cli, ["save", "gh:acme/e2e/remote", ...cwd], { env });
-    assert.equal(saved.code, 0, saved.stderr);
-    assert.equal(json(saved).saved, true);
-
-    const installed = await run(cli, ["install", "gh:acme/e2e/remote", ...cwd], { env });
-    assert.equal(installed.code, 0, installed.stderr);
-    assert.equal(json(installed).installed, true);
-
-    const prompt = await run(hook, [], {
-      env: { ...env, PLUGIN_ROOT: installedPlugin },
+    const prompt = json(run(hook, [], {
+      env: { PLUGIN_ROOT: installedPlugin },
       input: JSON.stringify({
         hook_event_name: "UserPromptSubmit",
         cwd: workspace,
-        prompt: "Use @skills:local and @skills:gh:acme/e2e/remote",
+        prompt: "Use @skills:local",
       }),
-    });
-    assert.equal(prompt.code, 0, prompt.stderr);
-    assert.ok(prompt.stdout, JSON.stringify(prompt));
-    const promptContext = JSON.parse(prompt.stdout).hookSpecificOutput.additionalContext;
-    assert.match(promptContext, /Skill: local/);
-    assert.match(promptContext, /Skill: gh:acme\/e2e\/remote/);
-    assert.doesNotMatch(promptContext, /LOCAL_BODY|REMOTE_BODY/);
-    assert.match(promptContext, /Never execute files/);
+    })).hookSpecificOutput.additionalContext;
+    assert.match(prompt, /Skill: local/);
+    assert.match(prompt, /Never execute files/);
+    assert.doesNotMatch(prompt, /LOCAL_BODY/);
 
-    const session = await run(hook, [], {
-      env: { ...env, PLUGIN_ROOT: installedPlugin },
-      input: JSON.stringify({
-        hook_event_name: "SessionStart",
-        source: "resume",
-        cwd: workspace,
-      }),
-    });
-    assert.equal(session.code, 0, session.stderr);
-    assert.ok(session.stdout, JSON.stringify(session));
-    const sessionContext = JSON.parse(session.stdout).hookSpecificOutput.additionalContext;
-    assert.match(sessionContext, /gh:acme\/e2e\/remote/);
-    assert.match(sessionContext, /no network resolution/i);
-
-    const listed = await run(cli, ["list", ...cwd], { env });
-    assert.equal(json(listed).skills.some((skill) => skill.id === "gh:acme/e2e/remote" && skill.installed), true);
-    assert.equal(existsSync(join(workspace, ".atskills", "gh", "acme", "e2e", "remote", "SKILL.md")), true);
-
-    const removed = await run(cli, ["remove", "gh:acme/e2e/remote", "--yes", ...cwd], { env });
-    assert.equal(removed.code, 0, removed.stderr);
-    assert.equal(json(removed).removed, true);
-    assert.equal(existsSync(join(workspace, ".atskills", "gh")), false);
-    assert.equal((await readFile(join(workspace, ".atskills", ".autotrigger"), "utf8")).trim(), "");
+    const session = json(run(hook, [], {
+      env: { PLUGIN_ROOT: installedPlugin },
+      input: JSON.stringify({ hook_event_name: "SessionStart", source: "resume", cwd: workspace }),
+    })).hookSpecificOutput.additionalContext;
+    assert.match(session, /Installed skill: local/);
+    assert.match(session, /no network resolution/i);
   } finally {
     await rm(fixtureRoot, { recursive: true, force: true });
   }

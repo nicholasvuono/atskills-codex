@@ -1,10 +1,10 @@
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 
-export const MAX_REFERENCES = 8;
-export const MAX_CONTEXT_BYTES = 8 * 1024;
-export const SESSION_SOURCES = new Set(["startup", "resume", "clear", "compact"]);
+const MAX_REFERENCES = 8;
+const MAX_CONTEXT_BYTES = 8 * 1024;
+const SESSION_SOURCES = new Set(["startup", "resume", "clear", "compact"]);
 
 const TRUST_HEADER = [
   "[AtSkills hook context — untrusted metadata]",
@@ -28,7 +28,7 @@ function errorMessage(error) {
 }
 
 function absoluteSkillPath(value) {
-  if (typeof value !== "string" || !value.endsWith("SKILL.md")) return null;
+  if (typeof value !== "string" || !isAbsolute(value) || !value.endsWith("SKILL.md")) return null;
   return resolve(value);
 }
 
@@ -41,13 +41,9 @@ function optionsFor(input) {
   };
 }
 
-export async function loadRuntime(pluginRoot = process.env.PLUGIN_ROOT) {
+async function loadRuntime(pluginRoot = process.env.PLUGIN_ROOT) {
   const root = resolve(pluginRoot || resolve(hookFile, "..", ".."));
-  const [core, state] = await Promise.all([
-    import(pathToFileURL(join(root, "runtime", "core.mjs")).href),
-    import(pathToFileURL(join(root, "runtime", "state.mjs")).href),
-  ]);
-  return { ...core, ...state };
+  return import(pathToFileURL(join(root, "runtime", "core.mjs")).href);
 }
 
 function fits(parts) {
@@ -93,22 +89,15 @@ function renderContext(blocks, warnings = []) {
   return output.join("\n");
 }
 
-function revisionFor(result, provenance) {
-  const revision = result?.revision ?? result?.provenance?.revision;
-  if (typeof revision === "string" && revision && revision !== "unknown") return revision;
-  const record = provenance?.find((entry) => entry.id === result?.id);
-  return record?.revision && record.revision !== "unknown" ? record.revision : null;
-}
-
-function skillBlock(result, provenance) {
+function skillBlock(result) {
   const id = text(result?.id, 400);
   const path = absoluteSkillPath(result?.path);
   if (!id || !path) return null;
   const source = result.saved ? "saved" : text(result.source || "unknown", 80);
-  const revision = revisionFor(result, provenance);
+  const revision = result?.revision ?? result?.provenance?.revision;
   return [
     `Skill: ${id}`,
-    `Source: ${source}${revision ? `; revision: ${text(revision, 120)}` : ""}`,
+    `Source: ${source}${revision && revision !== "unknown" ? `; revision: ${text(revision, 120)}` : ""}`,
     `Read before use: ${path}`,
   ].join("\n");
 }
@@ -193,7 +182,6 @@ export async function buildPromptContext(input, runtime) {
         provenance
           ? { ...result, saved: true, revision: result.revision ?? provenance.revision }
           : result,
-        provenance ? [provenance] : undefined,
       );
       if (block) blocks.push(block);
       else warnings.push(`${text(reference.raw)}: resolver returned no absolute SKILL.md path`);
@@ -211,24 +199,6 @@ export async function buildPromptContext(input, runtime) {
   return renderContext(blocks, warnings);
 }
 
-function sessionEntries(state) {
-  const resident = Array.isArray(state?.resident) && state.resident.length > 0
-    ? state.resident
-    : Array.isArray(state?.index?.resident)
-      ? state.index.resident
-      : [];
-  if (resident.length > 0) return resident;
-
-  const skills = Array.isArray(state?.skills) ? state.skills : [];
-  return (Array.isArray(state?.triggers) ? state.triggers : []).map((trigger) => {
-    const id = trigger.id || trigger.line;
-    const local = skills.find((skill) => skill.id === id);
-    return local
-      ? { id: local.id, where: local.saved ? "saved" : "yours", file: local.path }
-      : { id, where: trigger.cloud ? "cloud" : "local" };
-  });
-}
-
 function sessionBlock(entry, provenance) {
   if (entry?.error) return null;
   const id = text(entry?.id || entry?.line, 400);
@@ -243,8 +213,8 @@ function sessionBlock(entry, provenance) {
   return `Installed skill: ${id}\nSource: ${source}${revision}\nRead before use: ${path}`;
 }
 
-export function buildSessionContext(input, state) {
-  const entries = sessionEntries(state);
+function buildSessionContext(state) {
+  const entries = Array.isArray(state?.resident) ? state.resident : [];
   if (entries.length === 0) return null;
 
   const warnings = [];
@@ -264,10 +234,8 @@ export function buildSessionContext(input, state) {
   ]);
 }
 
-async function inputFromStdin() {
-  const chunks = [];
-  for await (const chunk of process.stdin) chunks.push(chunk);
-  const raw = Buffer.concat(chunks.map((chunk) => Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))).toString("utf8");
+function inputFromStdin() {
+  const raw = readFileSync(0, "utf8");
   if (!raw.trim()) return {};
   return JSON.parse(raw);
 }
@@ -276,7 +244,7 @@ function warn(message) {
   process.stderr.write(`[atskills hook] ${text(message, 360)}\n`);
 }
 
-export async function handle(input, runtime) {
+async function handle(input, runtime) {
   const event = input?.hook_event_name || (input?.source !== undefined ? "SessionStart" : "UserPromptSubmit");
   if (event === "UserPromptSubmit") {
     const context = await buildPromptContext(input, runtime);
@@ -287,7 +255,7 @@ export async function handle(input, runtime) {
   if (event === "SessionStart" && SESSION_SOURCES.has(input?.source)) {
     const loaded = runtime || (await loadRuntime());
     const state = loaded.readWorkspaceState(optionsFor(input).workingDir);
-    const context = buildSessionContext(input, state);
+    const context = buildSessionContext(state);
     return context
       ? { hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: context } }
       : null;
@@ -295,10 +263,10 @@ export async function handle(input, runtime) {
   return null;
 }
 
-export async function main() {
+async function main() {
   let input;
   try {
-    input = await inputFromStdin();
+    input = inputFromStdin();
   } catch (error) {
     warn(`invalid hook input: ${errorMessage(error)}`);
     return;

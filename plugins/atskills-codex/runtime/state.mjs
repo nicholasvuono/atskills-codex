@@ -38,9 +38,9 @@ import {
   resolveSafely,
 } from "./security.mjs";
 
-export const MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024;
-export const MAX_SNAPSHOT_FILES = 64;
-export const WORKSPACE_INDEX_VERSION = 1;
+const MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024;
+const MAX_SNAPSHOT_FILES = 64;
+const WORKSPACE_INDEX_VERSION = 1;
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
@@ -95,7 +95,7 @@ function stateId(raw) {
   return id;
 }
 
-export function workspacePaths(workingDir = process.cwd()) {
+function workspacePaths(workingDir = process.cwd()) {
   const root = skillsRoot(workingDir);
   const codex = join(root, ".codex");
   return {
@@ -207,30 +207,12 @@ function cacheRevision(cacheDir, id) {
   }
 }
 
-function provenanceFor(id, dir, options, resolved) {
+function revisionFor(id, dir, options) {
   const stamp = nearestSource(dir, skillsRoot(workingDirectory(options)));
-  if (stamp) {
-    return {
-      id: stamp.id,
-      source: stamp.id.startsWith("gh:")
-        ? "github"
-        : stamp.id.startsWith("hub:")
-          ? "hub"
-          : "local",
-      revision: stamp.revision ?? "unknown",
-      taken: stamp.taken,
-      file: stamp.file,
-    };
-  }
-  return {
-    id,
-    source: resolved?.source ?? "local",
-    revision: isCloud(id)
-      ? cacheRevision(options.cacheDir ?? DEFAULT_CACHE_DIR, id)
-      : "unknown",
-    taken: null,
-    file: null,
-  };
+  if (stamp) return stamp.revision ?? "unknown";
+  return isCloud(id)
+    ? cacheRevision(options.cacheDir ?? DEFAULT_CACHE_DIR, id)
+    : "unknown";
 }
 
 function sourceForSave(id, options) {
@@ -276,7 +258,7 @@ function rebuildAfterMutation(workingDir) {
   }
 }
 
-/** Save a detached snapshot with PR-4 size, conflict, and provenance rules. */
+/** Save a detached snapshot with size, conflict, and provenance checks. */
 export async function saveSkill(rawId, options = {}) {
   const id = stateId(rawId);
   if (typeof id !== "string") return id;
@@ -357,13 +339,12 @@ export async function saveSkill(rawId, options = {}) {
 
   const indexResult = rebuildAfterMutation(workingDir);
   if (indexResult?.warning) warning = warning ? `${warning}; ${indexResult.warning}` : indexResult.warning;
-  const provenance = provenanceFor(id, dest, resolverOptions, resolved);
   return success({
     ...saved,
     id,
     saved: true,
     installed,
-    revision: provenance.revision,
+    revision: revisionFor(id, dest, resolverOptions),
     bytes: stats.bytes,
     files: stats.files,
     ...(warning ? { warning } : {}),
@@ -432,7 +413,7 @@ export function uninstallSkill(rawId, options = {}) {
 export function removeSkill(rawId, options = {}) {
   const id = stateId(rawId);
   if (typeof id !== "string") return id;
-  if (options.confirm !== true && options.yes !== true) {
+  if (options.confirm !== true) {
     return failure("CONFIRMATION_REQUIRED", `removing '${id}' requires explicit confirmation`);
   }
 
@@ -464,7 +445,7 @@ export function removeSkill(rawId, options = {}) {
   }
 
   const uninstall = uninstallSkill(id, { workingDir });
-  const indexResult = rebuildAfterMutation(workingDir);
+  const indexResult = uninstall.removed ? null : rebuildAfterMutation(workingDir);
   const warning = [uninstall.warning, indexResult?.warning].filter(Boolean).join("; ");
   return success({
     id,
@@ -540,7 +521,7 @@ export function rebuildWorkspaceIndex(workingDir = process.cwd()) {
   return index;
 }
 
-export function readWorkspaceIndex(workingDir = process.cwd()) {
+function readWorkspaceIndex(workingDir = process.cwd()) {
   try {
     return JSON.parse(readFileSync(workspacePaths(workingDir).index, "utf8"));
   } catch {
@@ -553,7 +534,6 @@ export function readWorkspaceState(workingDir = process.cwd()) {
   const paths = workspacePaths(workingDir);
   const index = safeIndex(readWorkspaceIndex(workingDir), paths.root);
   return {
-    paths,
     index,
     triggers: parseTriggers(paths.root),
     resident: expandLocalTriggers(paths.root)
@@ -586,12 +566,3 @@ export function readProvenance(rawId, workingDir = process.cwd()) {
     file: stamp.file,
   };
 }
-
-// Names used by the later management skill/CLI, kept as aliases so the
-// shared adapter has one implementation and callers do not need wrappers.
-export const saveWorkspaceSkill = saveSkill;
-export const saveSkillToProject = saveSkill;
-export const installWorkspaceSkill = installSkill;
-export const uninstallWorkspaceSkill = uninstallSkill;
-export const removeWorkspaceSkill = removeSkill;
-export const provenance = readProvenance;

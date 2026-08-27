@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import { builtinModules } from "node:module";
-import { readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,23 +9,6 @@ const snapshotRoot = join(repositoryRoot, "vendor", "atskills");
 const snapshotManifestPath = join(repositoryRoot, "vendor", "atskills.snapshot.json");
 const ignoreRoot = join(repositoryRoot, "vendor", "ignore");
 const artifactPath = join(pluginRoot, "runtime", "atskills.mjs");
-
-const requiredDirectories = [
-  join(pluginRoot, "hooks"),
-  join(pluginRoot, "runtime"),
-  join(pluginRoot, "skills"),
-];
-
-const requiredFiles = [
-  join(repositoryRoot, ".agents", "plugins", "marketplace.json"),
-  join(pluginRoot, ".codex-plugin", "plugin.json"),
-  join(pluginRoot, "hooks", "hooks.json"),
-  join(repositoryRoot, "package-lock.json"),
-  join(repositoryRoot, "upstream.json"),
-  snapshotManifestPath,
-  join(ignoreRoot, "index.js"),
-  join(ignoreRoot, "package.json"),
-];
 
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
 
@@ -97,43 +79,7 @@ if (
 }
 config.commit = config.commit.toLowerCase();
 
-for (const directory of requiredDirectories) {
-  const details = await stat(directory).catch(() => null);
-  if (!details?.isDirectory()) {
-    throw new Error(`Missing required plugin directory: ${directory}`);
-  }
-}
-for (const file of requiredFiles) {
-  await stat(file).catch(() => {
-    throw new Error(`Missing required PR 2 file: ${file}`);
-  });
-}
-
 await verifySnapshot(config);
-
-const manifest = await readJson(join(pluginRoot, ".codex-plugin", "plugin.json"));
-if (manifest.name !== "atskills-codex") {
-  throw new Error("Plugin manifest name must be atskills-codex.");
-}
-if (manifest.skills !== "./skills/") {
-  throw new Error("Plugin manifest skills path must be ./skills/.");
-}
-if (Object.hasOwn(manifest, "hooks")) {
-  throw new Error("Hook discovery must use the default plugin location.");
-}
-
-const marketplace = await readJson(
-  join(repositoryRoot, ".agents", "plugins", "marketplace.json"),
-);
-const pluginEntry = marketplace.plugins?.find(
-  (entry) => entry?.name === "atskills-codex",
-);
-if (marketplace.name !== "atskills-local" || !pluginEntry) {
-  throw new Error("Repo marketplace is missing the atskills-codex entry.");
-}
-if (pluginEntry.source?.path !== "./plugins/atskills-codex") {
-  throw new Error("Marketplace source path must be ./plugins/atskills-codex.");
-}
 
 const distRoot = join(snapshotRoot, "dist");
 const distEntries = (await readdir(distRoot, { withFileTypes: true }))

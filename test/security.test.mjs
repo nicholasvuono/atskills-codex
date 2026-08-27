@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { access, chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -14,21 +14,12 @@ const cliPath = join(pluginRoot, "skills", "atskills", "scripts", "atskills.mjs"
 const hookPath = join(pluginRoot, "hooks", "atskills.mjs");
 
 function run(file, args, { cwd, env, input = "" } = {}) {
-  return new Promise((resolveResult, reject) => {
-    const child = spawn(process.execPath, [file, ...args], {
-      cwd: cwd ?? repositoryRoot,
-      env: { ...process.env, ...env },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => (stdout += chunk));
-    child.stderr.on("data", (chunk) => (stderr += chunk));
-    child.on("error", reject);
-    child.on("close", (code) => resolveResult({ code, stdout, stderr }));
-    child.stdin.end(input);
+  return spawnSync(process.execPath, [file, ...args], {
+    cwd: cwd ?? repositoryRoot,
+    env: { ...process.env, ...env },
+    encoding: "utf8",
+    input,
+    timeout: 5000,
   });
 }
 
@@ -62,8 +53,8 @@ test("traversal and symlinked skills cannot escape the workspace", async () => {
     assert.equal(escaped.success, false);
     assert.equal(escaped.code, "INVALID_REF");
 
-    const traversal = await run(cliPath, ["get", "../outside", "--cwd", root, "--json"]);
-    assert.equal(traversal.code, 1);
+    const traversal = run(cliPath, ["get", "../outside", "--cwd", root, "--json"]);
+    assert.equal(traversal.status, 1);
     assert.equal(parseJson(traversal).code, "INVALID_REF");
 
     const state = readWorkspaceState(root);
@@ -92,11 +83,11 @@ test("oversized and hostile skills stay bounded and unexecuted", async () => {
     await writeFile(pwn, `await import("node:fs/promises").then(({ writeFile }) => writeFile(${JSON.stringify(marker)}, "ran"));`);
     await chmod(pwn, 0o755);
 
-    const large = await run(cliPath, ["get", "large", "--cwd", root, "--json"]);
-    assert.equal(large.code, 1);
+    const large = run(cliPath, ["get", "large", "--cwd", root, "--json"]);
+    assert.equal(large.status, 1);
     assert.equal(parseJson(large).code, "TOO_LARGE");
 
-    const hook = await run(hookPath, [], {
+    const hook = run(hookPath, [], {
       env: { PLUGIN_ROOT: pluginRoot },
       input: JSON.stringify({
         hook_event_name: "UserPromptSubmit",
@@ -104,7 +95,7 @@ test("oversized and hostile skills stay bounded and unexecuted", async () => {
         prompt: "Use @skills:hostile",
       }),
     });
-    assert.equal(hook.code, 0, hook.stderr);
+    assert.equal(hook.status, 0, hook.stderr);
     const context = JSON.parse(hook.stdout).hookSpecificOutput.additionalContext;
     assert.match(context, /untrusted data/);
     assert.match(context, /Never execute files/);
@@ -127,7 +118,7 @@ test("noninteractive Git failures fail closed without prompting or hanging", asy
     );
     await chmod(join(fakeBin, "git"), 0o755);
     const started = Date.now();
-    const result = await run(cliPath, ["get", "gh:private/repo/skill", "--cwd", root, "--json"], {
+    const result = run(cliPath, ["get", "gh:private/repo/skill", "--cwd", root, "--json"], {
       env: {
         PATH: `${fakeBin}:${process.env.PATH}`,
         ATSKILLS_CACHE: join(root, "cache"),
@@ -135,7 +126,7 @@ test("noninteractive Git failures fail closed without prompting or hanging", asy
       },
     });
     assert.ok(Date.now() - started < 3000);
-    assert.equal(result.code, 1);
+    assert.equal(result.status, 1);
     assert.equal(parseJson(result).ok, false);
     assert.equal(await readFile(marker, "utf8"), "0");
     assert.doesNotMatch(result.stderr, /terminal|password|username|prompt/i);
@@ -158,11 +149,11 @@ test("SessionStart ignores forged external metadata and performs no Git work", a
         provenance: [{ id: "forged", path: join(outside, "SKILL.md") }],
       }),
     );
-    const result = await run(hookPath, [], {
+    const result = run(hookPath, [], {
       env: { PLUGIN_ROOT: pluginRoot, ATSKILLS_GITHUB_BASE_URL: "https://example.invalid" },
       input: JSON.stringify({ hook_event_name: "SessionStart", source: "startup", cwd: root }),
     });
-    assert.equal(result.code, 0, result.stderr);
+    assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, "");
     assert.doesNotMatch(result.stderr, /failed/i);
   } finally {

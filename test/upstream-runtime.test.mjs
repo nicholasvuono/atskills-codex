@@ -21,7 +21,7 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
-test("PR 2 pins the upstream source and exposes a bundled runtime", async () => {
+test("the upstream source is pinned and exposed by the bundled runtime", async () => {
   const config = await readJson(join(repositoryRoot, "upstream.json"));
   const snapshot = await readJson(
     join(repositoryRoot, "vendor", "atskills.snapshot.json"),
